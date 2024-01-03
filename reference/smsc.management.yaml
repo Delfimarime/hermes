@@ -1,0 +1,664 @@
+openapi: 3.1.0
+x-stoplight:
+  id: pwt4cn309ck11
+info:
+  title: SMSC management API
+  version: '1.0'
+  summary: API that manages smscs in Hermes SMS Gateway
+  description: API that manages smscs in Hermes SMS Gateway
+  contact:
+    name: Delfim Marime
+    url: raitonbl.com
+    email: delfimarime@outlook.com
+servers:
+  - url: 'http://localhost:3000'
+paths:
+  /smscs:
+    get:
+      summary: Get SMSC Page
+      tags:
+        - smsc
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ResponsePage'
+                  - type: object
+                    x-stoplight:
+                      id: 4mfsafcq9gsps
+                    properties:
+                      items:
+                        type: array
+                        x-stoplight:
+                          id: fzedew5lci7nk
+                        items:
+                          $ref: '#/components/schemas/PaginatedSmsc'
+                          x-stoplight:
+                            id: h7jngemf9gbju
+              examples: {}
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: GetPage
+      description: ''
+      parameters:
+        - $ref: '#/components/parameters/search'
+        - schema:
+            type: string
+            enum:
+              - SENDER
+              - RECEIVER
+              - HYBRID
+          in: query
+          name: type
+        - schema:
+            type: string
+            enum:
+              - ENABLED
+              - DISABLED
+              - COOLDOWN
+          in: query
+          name: state
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+      requestBody:
+        content: {}
+  '/smscs/{id}':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+        description: Identifier for the specific smsc
+    get:
+      summary: Get SMSC by id
+      tags:
+        - smsc
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Smsc'
+        '404':
+          $ref: '#/components/responses/SmscNotFound'
+      operationId: findById
+      description: ''
+  '/smscs/{id}/configuration':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    get:
+      summary: Get SMSC Configuration
+      tags:
+        - smsc
+        - config
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configuration'
+        '404':
+          $ref: '#/components/responses/SmscNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: get-smscs-id-configuration
+  '/smscs/{id}/refresh':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    post:
+      summary: Refresh SMSC
+      operationId: refresh-smsc
+      responses:
+        '202':
+          description: Accepted
+        '404':
+          $ref: '#/components/responses/SmscNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      description: Enforces a refresh on a specific SMSC by id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Justification'
+      tags:
+        - smsc
+        - config
+  '/smscs/{id}/events':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    get:
+      summary: Get Smsc events
+      tags:
+        - smsc
+        - events
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ResponsePage'
+                  - type: object
+                    x-stoplight:
+                      id: xqayj87nfhtzg
+                    additionalProperties: false
+                    properties:
+                      items:
+                        type: array
+                        x-stoplight:
+                          id: gs04p4tpa3xdd
+                        items:
+                          $ref: '#/components/schemas/PaginatedEvent'
+                          x-stoplight:
+                            id: b6n69duu46h2m
+                    required:
+                      - items
+              examples: {}
+        '404':
+          $ref: '#/components/responses/SmscNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: get-smscs-id-events
+      parameters:
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - schema:
+            type: string
+            enum:
+              - +created_at
+              - '-created_at'
+              - +type
+              - '-type'
+            default: '-created_at'
+          in: query
+          name: sort
+        - schema:
+            type: string
+          in: query
+          name: type
+  '/smscs/{id}/events/{eventId}':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: eventId
+        in: path
+        required: true
+    get:
+      summary: Get Smsc event by Id
+      tags:
+        - smsc
+        - events
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                Smsc not found:
+                  value:
+                    status: 404
+                    title: Smsc Not found
+                    type: /problems/smsc/not-found
+                    detail: 'The smsc[id=''${id}''] doesn''t exist'
+                Event not found:
+                  value:
+                    status: 404
+                    title: Smsc event Not found
+                    type: /problems/smsc/events/not-found
+                    detail: 'The event[id=''${id}''] for smsc[id=''${id}''] doesn''t exist'
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: findEventById
+components:
+  schemas:
+    Type:
+      title: Type
+      x-stoplight:
+        id: u4mlr494g99gd
+      type: string
+      enum:
+        - SENDER
+        - RECEIVER
+        - HYBRID
+    State:
+      title: State
+      x-stoplight:
+        id: 4sm1z3mttkb8c
+      type: string
+      enum:
+        - ENABLED
+        - DISABLED
+        - COOLDOWN
+    ResponsePage:
+      type: object
+      x-stoplight:
+        id: 7006aee690024
+      required:
+        - next
+        - prev
+      properties:
+        self:
+          description: Pagination link|cursor pointing to the current page.
+          type: string
+          format: uri
+        first:
+          description: Pagination link|cursor pointing to the first page.
+          type: string
+          format: uri
+        prev:
+          description: Pagination link|cursor pointing to the previous page.
+          type: string
+          format: uri
+        next:
+          description: Pagination link|cursor pointing to the next page.
+          type: string
+          format: uri
+        last:
+          description: Pagination link|cursor pointing to the last page.
+          type: string
+          format: uri
+    PaginatedSmsc:
+      type: object
+      x-stoplight:
+        id: b6de2704dd810
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/Type'
+        state:
+          $ref: '#/components/schemas/State'
+        refreshes_in:
+          type: number
+        id:
+          type: string
+          x-stoplight:
+            id: cee9e26jaxoa2
+          format: uuid
+      required:
+        - name
+        - description
+        - type
+        - state
+        - id
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          description: |
+            A URI reference that uniquely identifies the problem type only in the context of the provided API. Opposed to the specification in RFC-9457, it is neither recommended to be dereferenceable and point to a human-readable documentation nor globally unique for the problem type.
+          default: 'about:blank'
+          example: /some/uri-reference
+        title:
+          type: string
+          description: |
+            A short summary of the problem type. Written in English and readable for engineers, usually not suited for non technical stakeholders and not localized.
+          example: some title for the error situation
+        status:
+          type: number
+          format: int32
+          description: |
+            The HTTP status code generated by the origin server for this occurrence of the problem.
+        detail:
+          type: string
+          description: |
+            A human readable explanation specific to this occurrence of the problem that is helpful to locate the problem and give advice on how to proceed. Written in English and readable for engineers, usually not suited for non technical stakeholders and not localized.
+          example: some description for the error situation
+        instance:
+          type: string
+          format: uri-reference
+          description: |
+            A URI reference that identifies the specific occurrence of the problem, e.g. by adding a fragment identifier or sub-path to the problem type. May be used to locate the root of this problem in the source code.
+          example: /some/uri-reference#specific-occurrence-context
+    Smsc:
+      title: Smsc
+      x-stoplight:
+        id: mt0i9rjg6rcgz
+      allOf:
+        - $ref: '#/components/schemas/PaginatedSmsc'
+        - type: object
+          x-stoplight:
+            id: oyppv669ksvnv
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            contact_information:
+              type: object
+              x-stoplight:
+                id: psss2qwohdgod
+              minProperties: 1
+              additionalProperties: false
+              required:
+                - phone
+                - person_of_contact
+              properties:
+                supplier:
+                  type: string
+                  x-stoplight:
+                    id: h9t9w32mkajuz
+                email:
+                  type: string
+                  x-stoplight:
+                    id: 5mj1qfpw6tx54
+                phone:
+                  type: array
+                  x-stoplight:
+                    id: vzkira0vqh234
+                  minItems: 1
+                  items:
+                    x-stoplight:
+                      id: 4lw70fpc7c487
+                    type: string
+                person_of_contact:
+                  type: array
+                  x-stoplight:
+                    id: 16lltizl98ad2
+                  minItems: 1
+                  items:
+                    x-stoplight:
+                      id: 5imuyr57mg3i5
+                    type: string
+          required:
+            - contact_information
+      examples:
+        - name: string
+          description: string
+          type: SENDER
+          state: ENABLED
+          refreshes_in: 0
+          contact_information:
+            supplier: string
+            email: string
+            phone:
+              - string
+            person_of_contact:
+              - string
+    Configuration:
+      title: Configuration
+      x-stoplight:
+        id: s65cjej0aax7c
+      type: object
+      additionalProperties: false
+      properties:
+        host:
+          type: string
+          x-stoplight:
+            id: uya4nz8ohteox
+        port:
+          type: string
+          x-stoplight:
+            id: mxt0rlkyw0awd
+        sender_address:
+          type: string
+          x-stoplight:
+            id: axxzjyufsb7sw
+        authentication:
+          type: object
+          x-stoplight:
+            id: ma6u34e9ip4sv
+          required:
+            - id
+            - secret
+          properties:
+            id:
+              type: string
+              x-stoplight:
+                id: d7urivtnynd73
+            secret:
+              type: string
+              x-stoplight:
+                id: 8g4822a033hs5
+        opts:
+          type: object
+          x-stoplight:
+            id: a4wfnjx81f2oy
+          properties:
+            keep_alive_timeout:
+              type: number
+              x-stoplight:
+                id: u79s1pmg13xtx
+              minimum: 1
+            connection_bind_timeout:
+              type: number
+              x-stoplight:
+                id: vaotbvmjtbt2v
+              minimum: 1
+        targets:
+          type: array
+          x-stoplight:
+            id: 9xiworc3trx2i
+          items:
+            $ref: '#/components/schemas/Target'
+            x-stoplight:
+              id: zn667tsyptuke
+      required:
+        - host
+        - port
+        - authentication
+        - targets
+    Target:
+      title: Target
+      x-stoplight:
+        id: 7mikfl9mjuyat
+      type: object
+      properties:
+        name:
+          type: string
+          x-stoplight:
+            id: 87msxsvgyos1v
+        description:
+          type: string
+          x-stoplight:
+            id: iv1s04djgtmgg
+        pattern:
+          type: string
+          x-stoplight:
+            id: qde008dnszmq7
+      required:
+        - name
+        - description
+        - pattern
+    PaginatedEvent:
+      title: PaginatedEvent
+      x-stoplight:
+        id: ups1klf1t77ha
+      type: object
+      properties:
+        id:
+          type: string
+          x-stoplight:
+            id: ospbutup1gc30
+          format: uuid
+        type:
+          type: object
+          x-stoplight:
+            id: g6uzydoj2yelm
+          properties:
+            name:
+              type: string
+              x-stoplight:
+                id: 915ylsg46gq73
+            audience:
+              type: string
+              x-stoplight:
+                id: hk15ze493g4ag
+        created_at:
+          type: string
+          x-stoplight:
+            id: qiqt3m3dahrv0
+          format: date-time
+        created_by:
+          type: string
+          x-stoplight:
+            id: vkutdxiruvfvn
+          description: Username of the user who initiated it
+        triggered_by:
+          type: string
+          x-stoplight:
+            id: 7ly9nqrigb5ph
+          description: The system used to initiate the event
+      required:
+        - id
+        - type
+        - created_at
+        - triggered_by
+    Event:
+      title: Event
+      x-stoplight:
+        id: a4fwbzs669hlk
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEvent'
+        - type: object
+          x-stoplight:
+            id: t2zf1k9yk369i
+          properties:
+            justification:
+              $ref: '#/components/schemas/Justification'
+              x-stoplight:
+                id: hnqor6tfjmtng
+    Justification:
+      title: Justification
+      x-stoplight:
+        id: f62s872147yw3
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          x-stoplight:
+            id: dcts93e2w3lul
+          format: uuid
+        reason:
+          type: string
+          x-stoplight:
+            id: svikpmoy7boe9
+        category:
+          type: string
+          x-stoplight:
+            id: cu7nlv0n0spva
+          enum:
+            - MAINTENANCE
+            - ISSUE_SOLVING
+            - OTHER
+        ticket:
+          type: object
+          x-stoplight:
+            id: azzzwn0oz0tec
+          additionalProperties: false
+          properties:
+            number:
+              type: string
+              x-stoplight:
+                id: vmpdp2p1iiy2u
+            opened_in:
+              type: object
+              x-stoplight:
+                id: quvq1i7ulj0bb
+              additionalProperties: false
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  x-stoplight:
+                    id: pxe0u9d4jbfs5
+                hosted_in:
+                  type: string
+                  x-stoplight:
+                    id: ihcjntf7lk2gm
+                  enum:
+                    - PREM
+                    - CLOUD
+                    - OTHER
+          required:
+            - number
+            - opened_in
+      required:
+        - reason
+        - category
+  securitySchemes: {}
+  parameters:
+    search:
+      name: s
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Search like
+    page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: number
+        minimum: 1
+    limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: number
+        minimum: 10
+        default: 15
+  responses:
+    Problem:
+      description: '500'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    SmscNotFound:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            Example 1:
+              value:
+                status: 404
+                title: Smsc Not found
+                type: /problems/smsc/not-found
+                detail: 'The smsc[id=''${id}''] doesn''t exist'
+tags:
+  - name: config
+  - name: events
+  - name: smsc

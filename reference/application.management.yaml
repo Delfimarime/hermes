@@ -2,9 +2,9 @@ openapi: 3.1.0
 x-stoplight:
   id: d2x4dncugtunk
 info:
-  title: Client Management API
-  version: '1.0'
-  summary: API that manages clients in Hermes SMS Gateway
+  title: SMS Management API
+  version: 1.0.0
+  summary: API that manages clients & sms in Hermes SMS Gateway
   description: ''
   contact:
     name: Delfim Marime
@@ -40,7 +40,7 @@ paths:
                             id: a158s3wsei6on
         '500':
           $ref: '#/components/responses/Problem'
-      operationId: get-clients
+      operationId: getClients
       parameters:
         - $ref: ./smsc.management.yaml#/components/parameters/search
         - $ref: ./smsc.management.yaml#/components/parameters/page
@@ -51,7 +51,7 @@ paths:
           name: is_enabled
     post:
       summary: Add Client
-      operationId: add-client
+      operationId: addClient
       responses:
         '201':
           description: Created
@@ -96,6 +96,83 @@ paths:
           $ref: '#/components/responses/Problem'
       operationId: findClientById
       description: ''
+    put:
+      summary: Update Client
+      operationId: setClient
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '404':
+          $ref: '#/components/responses/ClientNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClientRequest'
+      tags:
+        - client
+    delete:
+      summary: Remove Client
+      operationId: deleteClientById
+      responses:
+        '204':
+          description: No Content
+        '404':
+          $ref: '#/components/responses/ClientNotFound'
+        '500':
+          $ref: '#/components/responses/ClientNotFound'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Justification'
+        description: ''
+      tags:
+        - client
+  '/clients/{id}/callback':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    put:
+      summary: Update Client callback
+      operationId: setClientCallback
+      responses:
+        '200':
+          description: OK
+        '404':
+          $ref: '#/components/responses/ClientNotFound'
+        '422':
+          description: Unprocessable Entity (WebDAV)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+      description: ''
+      tags:
+        - client
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Callback'
+  /messages:
+    get:
+      summary: Your GET endpoint
+      tags:
+        - message
+      responses: {}
+      operationId: get-messages
 components:
   schemas:
     ResponsePage:
@@ -401,6 +478,20 @@ components:
       title: NewClientRequest
       x-stoplight:
         id: ye9lh5a6wq3mk
+      allOf:
+        - type: object
+          properties:
+            callback:
+              $ref: '#/components/schemas/Callback'
+              x-stoplight:
+                id: bemb0gea7g4tg
+        - $ref: '#/components/schemas/UpdateClientRequest'
+          x-stoplight:
+            id: 8jm518h5wbi6l
+    UpdateClientRequest:
+      title: UpdateClientRequest
+      x-stoplight:
+        id: 3tf3nbprbb3hl
       type: object
       properties:
         name:
@@ -420,15 +511,71 @@ components:
           x-stoplight:
             id: 43dea7o29srj6
           default: false
-        callback:
-          $ref: '#/components/schemas/Callback'
-          x-stoplight:
-            id: bemb0gea7g4tg
       required:
         - name
         - description
         - type
         - is_enabled
+    Justification:
+      title: Justification
+      x-stoplight:
+        id: e2l6bl9ia1w6l
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          x-stoplight:
+            id: 1w5tfrhnsfvq4
+          format: uuid
+        reason:
+          type: string
+          x-stoplight:
+            id: t97d96vfhtlst
+        category:
+          type: string
+          x-stoplight:
+            id: 0t9mvq3a3ysyx
+          enum:
+            - MAINTENANCE
+            - ISSUE_SOLVING
+            - OTHER
+        ticket:
+          type: object
+          x-stoplight:
+            id: c4f8yv013o3ee
+          additionalProperties: false
+          properties:
+            number:
+              type: string
+              x-stoplight:
+                id: 3zxfc4xr3ryql
+            opened_in:
+              type: object
+              x-stoplight:
+                id: yt9v574abd1r6
+              additionalProperties: false
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  x-stoplight:
+                    id: b6z8ynt6g9lku
+                hosted_in:
+                  type: string
+                  x-stoplight:
+                    id: mci8nlxp46nit
+                  enum:
+                    - PREM
+                    - CLOUD
+                    - OTHER
+          required:
+            - number
+            - opened_in
+      required:
+        - reason
+        - category
   securitySchemes: {}
   parameters:
     search:
@@ -477,3 +624,4 @@ security:
   - OpenID Connect Provider: []
 tags:
   - name: client
+  - name: message

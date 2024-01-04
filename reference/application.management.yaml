@@ -16,10 +16,11 @@ paths:
   /clients:
     get:
       summary: Get Clients Page
-      tags: []
+      tags:
+        - client
       responses:
-        '200':
-          description: OK
+        '202':
+          description: Accepted
           content:
             application/json:
               schema:
@@ -34,9 +35,11 @@ paths:
                         x-stoplight:
                           id: 2ckgyca2p2few
                         items:
+                          $ref: '#/components/schemas/PaginatedClient'
                           x-stoplight:
                             id: a158s3wsei6on
-                          type: object
+        '500':
+          $ref: '#/components/responses/Problem'
       operationId: get-clients
       parameters:
         - $ref: ./smsc.management.yaml#/components/parameters/search
@@ -46,6 +49,53 @@ paths:
             type: boolean
           in: query
           name: is_enabled
+    post:
+      summary: Add Client
+      operationId: add-client
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '422':
+          description: Unprocessable Entity (WebDAV)
+        '500':
+          $ref: '#/components/responses/Problem'
+      description: ''
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewClientRequest'
+      tags:
+        - client
+  '/clients/{id}':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    get:
+      summary: Get Specific Client by Id
+      tags:
+        - client
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+              examples: {}
+        '404':
+          $ref: '#/components/responses/ClientNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: findClientById
+      description: ''
 components:
   schemas:
     ResponsePage:
@@ -179,12 +229,9 @@ components:
           x-stoplight:
             id: fipjp2h335gn8
         type:
-          type: string
+          $ref: '#/components/schemas/Type'
           x-stoplight:
             id: cxiuksmxfmzu3
-          enum:
-            - BACKEND
-            - FRONTEND
         is_enabled:
           type: boolean
           x-stoplight:
@@ -219,169 +266,169 @@ components:
                 id: ubcu1i81ctn01
               additionalProperties: false
               required:
-                - interface
                 - name
               properties:
-                interface:
-                  type: string
-                  x-stoplight:
-                    id: dmd34q623sxoj
-                  enum:
-                    - SQS_CLIENT
-                    - KAFKA_CLIENT
-                    - RABBITMQ_CLIENT
-                    - SNS_CLIENT
                 name:
                   type: string
                   x-stoplight:
                     id: q27lfs8fyek5x
-          required:
-            - managed_by
+                id:
+                  type: string
+                  x-stoplight:
+                    id: yf74jevza8exg
+                  format: uuid
+                server_ip:
+                  type: string
+                  x-stoplight:
+                    id: gzebwx0rhdqyq
+            callback:
+              $ref: '#/components/schemas/Callback'
+              x-stoplight:
+                id: 3r96kv2owd3f8
     Callback:
       title: Callback
       x-stoplight:
         id: i68vyffy19j2j
-      allOf:
-        - description: HTTP Callback
-          properties:
-            url:
-              type: string
-              x-stoplight:
-                id: apluild2878xc
-            method:
-              type: string
-              x-stoplight:
-                id: v0ngjfove86be
-              enum:
-                - GET
-                - POST
-                - PUT
-                - PATCH
-            request:
-              type: object
-              x-stoplight:
-                id: koqox8tkz2t6k
-              properties:
-                body:
-                  type: string
-                  x-stoplight:
-                    id: g6p6biv8o02jk
-                headers:
-                  type:
-                    - object
-                  x-stoplight:
-                    id: b9yttrzvqowh3
-                  additionalProperties: false
-                  minProperties: 1
-            security:
-              x-stoplight:
-                id: rcaxb192y4x9h
-              allOf:
-                - additionalProperties: false
-                  properties:
-                    type:
-                      type: string
-                      x-stoplight:
-                        id: k2soz8vp1s4kk
-                    username:
-                      type: string
-                      x-stoplight:
-                        id: sd10zz5eqadit
-                    password:
-                      type: string
-                      x-stoplight:
-                        id: d1uytpm6vmyhl
-                  required:
-                    - type
-                    - username
-                    - password
-                - x-stoplight:
-                    id: xt3eyeg7zgz5v
-                  properties:
-                    type:
-                      type: string
-                      x-stoplight:
-                        id: c9q61o9058qj2
-                      enum:
-                        - TOKEN
-                    header:
-                      type: string
-                      x-stoplight:
-                        id: gelw8lz7fmrqt
-                      default: Authorization
-                    token:
-                      type: string
-                      x-stoplight:
-                        id: 1aq6bbgqnc69y
-                  required:
-                    - type
-                    - header
-                    - token
-                - x-stoplight:
-                    id: n8u8dxvo3tc27
-                  properties:
-                    type:
-                      type: string
-                      x-stoplight:
-                        id: pq3jm91hm1md6
-                    client_id:
-                      type: string
-                      x-stoplight:
-                        id: 5dj88qdvggahb
-                    client_secret:
-                      type: string
-                      x-stoplight:
-                        id: 6ogjaprgzyrxh
-                    token_url:
-                      type: string
-                      x-stoplight:
-                        id: thrtc26jfj44p
-                  required:
-                    - type
-                    - client_id
-                    - client_secret
-                    - token_url
-              type: object
-        - x-stoplight:
-            id: hvlnop87n9qwk
-          properties:
-            queue:
-              type: object
-              x-stoplight:
-                id: gqa1oi17gufik
-              minProperties: 1
-              maxProperties: 1
-              properties:
-                name:
-                  type: string
-                  x-stoplight:
-                    id: y8bckfsfdbbll
-                url:
-                  type: string
-                  x-stoplight:
-                    id: ahdxs97p98bu1
-            topic:
-              type: object
-              x-stoplight:
-                id: 7ol97d3x8lchk
-              properties:
-                name:
-                  type: string
-                  x-stoplight:
-                    id: fa9sh0qy2fpdl
-              required:
-                - name
-            type:
-              type: string
-              x-stoplight:
-                id: 6lpjj8g45soqh
-              enum:
-                - KAFKA_CLIENT
-                - RABBITMQ_CLIENT
-                - SQS_CLIENT
-                - SNS_CLIENT
-                
       type: object
+      properties:
+        url:
+          type: string
+          x-stoplight:
+            id: r5hps54ehy8si
+        method:
+          type: string
+          x-stoplight:
+            id: by8iykgjt3f5g
+          enum:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+        request:
+          type: object
+          x-stoplight:
+            id: fbg726v9jgiev
+          properties:
+            body:
+              type: string
+              x-stoplight:
+                id: 9n75x1u1656a4
+            headers:
+              type:
+                - object
+              x-stoplight:
+                id: 0mf3y8vm623dy
+              additionalProperties: false
+              minProperties: 1
+        security:
+          x-stoplight:
+            id: g60s2vunqiydk
+          allOf:
+            - additionalProperties: false
+              properties:
+                type:
+                  type: string
+                  x-stoplight:
+                    id: 73bftwvwr6ngf
+                username:
+                  type: string
+                  x-stoplight:
+                    id: hgmpt0smxd3k6
+                password:
+                  type: string
+                  x-stoplight:
+                    id: evms2m859i3pn
+              required:
+                - type
+                - username
+                - password
+            - x-stoplight:
+                id: wb4l1o4xdbbu2
+              properties:
+                type:
+                  type: string
+                  x-stoplight:
+                    id: 9qiuvdscvxoga
+                  enum:
+                    - TOKEN
+                header:
+                  type: string
+                  x-stoplight:
+                    id: e5mnko8xvhq3r
+                  default: Authorization
+                token:
+                  type: string
+                  x-stoplight:
+                    id: 8595fqateq62m
+              required:
+                - type
+                - header
+                - token
+            - x-stoplight:
+                id: m6viwae6bc0f3
+              properties:
+                type:
+                  type: string
+                  x-stoplight:
+                    id: 8gq9qra3qqqtq
+                client_id:
+                  type: string
+                  x-stoplight:
+                    id: os75f5b9lk17h
+                client_secret:
+                  type: string
+                  x-stoplight:
+                    id: 3w2vqngbg458m
+                token_url:
+                  type: string
+                  x-stoplight:
+                    id: snsjnd7egpmgd
+              required:
+                - type
+                - client_id
+                - client_secret
+                - token_url
+          type: object
+    Type:
+      title: Type
+      x-stoplight:
+        id: 2wejkz5l3gmih
+      type: string
+      enum:
+        - BACKEND
+        - FRONTEND
+    NewClientRequest:
+      title: NewClientRequest
+      x-stoplight:
+        id: ye9lh5a6wq3mk
+      type: object
+      properties:
+        name:
+          type: string
+          x-stoplight:
+            id: mx46cpk6arw5o
+        description:
+          type: string
+          x-stoplight:
+            id: 6ra71rcvnflcj
+        type:
+          $ref: '#/components/schemas/Type'
+          x-stoplight:
+            id: ornm6r20otsi7
+        is_enabled:
+          type: boolean
+          x-stoplight:
+            id: 43dea7o29srj6
+          default: false
+        callback:
+          $ref: '#/components/schemas/Callback'
+          x-stoplight:
+            id: bemb0gea7g4tg
+      required:
+        - name
+        - description
+        - type
+        - is_enabled
   securitySchemes: {}
   parameters:
     search:
@@ -413,5 +460,20 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Problem'
+    ClientNotFound:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            Example 1:
+              value:
+                status: 404
+                title: Client Not found
+                type: /problems/client/not-found
+                detail: 'The client[id=''${id}''] doesn''t exist'
 security:
   - OpenID Connect Provider: []
+tags:
+  - name: client

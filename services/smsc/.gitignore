@@ -524,5 +524,4 @@ $RECYCLE.BIN/
 
 # Project specifics
 dist/
-*/services/dist/
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,linux,goland,goland+iml,goland+all,intellij,intellij+iml,intellij+all,terraform

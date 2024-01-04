@@ -1,0 +1,548 @@
+openapi: 3.1.0
+info:
+  title: SMSC management API
+  version: '1.0'
+  summary: API that manages smscs in Hermes SMS Gateway
+  contact:
+    name: Delfim Marime
+    url: raitonbl.com
+    email: delfimarime@outlook.com
+servers:
+  - url: 'http://localhost:3000'
+paths:
+  /smscs:
+    get:
+      summary: Get SMSC Page
+      tags:
+        - smsc
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ResponsePage'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PaginatedSmsc'
+              examples: {}
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: GetPage
+      description: ''
+      parameters:
+        - $ref: '#/components/parameters/search'
+        - schema:
+            type: string
+            enum:
+              - SENDER
+              - RECEIVER
+              - HYBRID
+          in: query
+          name: type
+        - schema:
+            type: string
+            enum:
+              - ENABLED
+              - DISABLED
+              - COOLDOWN
+          in: query
+          name: state
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+      requestBody:
+        content: {}
+  '/smscs/{id}':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+        description: Identifier for the specific smsc
+    get:
+      summary: Get SMSC by id
+      tags:
+        - smsc
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Smsc'
+        '404':
+          $ref: '#/components/responses/SmscNotFound'
+      operationId: findById
+      description: ''
+  '/smscs/{id}/configuration':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    get:
+      summary: Get SMSC Configuration
+      tags:
+        - smsc
+        - config
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configuration'
+        '404':
+          $ref: '#/components/responses/SmscNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: get-smscs-id-configuration
+  '/smscs/{id}/refresh':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    post:
+      summary: Refresh SMSC
+      operationId: refresh-smsc
+      responses:
+        '202':
+          description: Accepted
+        '404':
+          $ref: '#/components/responses/SmscNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      description: Enforces a refresh on a specific SMSC by id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Justification'
+      tags:
+        - smsc
+        - config
+  '/smscs/{id}/events':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    get:
+      summary: Get Smsc events
+      tags:
+        - smsc
+        - events
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ResponsePage'
+                  - type: object
+                    additionalProperties: false
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PaginatedEvent'
+                    required:
+                      - items
+        '404':
+          $ref: '#/components/responses/SmscNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: get-smscs-id-events
+      parameters:
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - schema:
+            type: string
+            enum:
+              - +created_at
+              - '-created_at'
+              - +type
+              - '-type'
+            default: '-created_at'
+          in: query
+          name: sort
+        - schema:
+            type: string
+          in: query
+          name: type
+  '/smscs/{id}/events/{eventId}':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: eventId
+        in: path
+        required: true
+    get:
+      summary: Get Smsc event by Id
+      tags:
+        - smsc
+        - events
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                Smsc not found:
+                  value:
+                    status: 404
+                    title: Smsc Not found
+                    type: /problems/smsc/not-found
+                    detail: 'The smsc[id=''${id}''] doesn''t exist'
+                Event not found:
+                  value:
+                    status: 404
+                    title: Smsc event Not found
+                    type: /problems/smsc/events/not-found
+                    detail: 'The event[id=''${id}''] for smsc[id=''${id}''] doesn''t exist'
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: findEventById
+components:
+  schemas:
+    Type:
+      title: Type
+      type: string
+      enum:
+        - SENDER
+        - RECEIVER
+        - HYBRID
+    State:
+      title: State
+      type: string
+      enum:
+        - ENABLED
+        - DISABLED
+        - COOLDOWN
+    ResponsePage:
+      type: object
+      required:
+        - next
+        - prev
+      properties:
+        self:
+          description: Pagination link|cursor pointing to the current page.
+          type: string
+          format: uri
+        first:
+          description: Pagination link|cursor pointing to the first page.
+          type: string
+          format: uri
+        prev:
+          description: Pagination link|cursor pointing to the previous page.
+          type: string
+          format: uri
+        next:
+          description: Pagination link|cursor pointing to the next page.
+          type: string
+          format: uri
+        last:
+          description: Pagination link|cursor pointing to the last page.
+          type: string
+          format: uri
+    PaginatedSmsc:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/Type'
+        state:
+          $ref: '#/components/schemas/State'
+        refreshes_in:
+          type: number
+        id:
+          type: string
+          format: uuid
+      required:
+        - name
+        - description
+        - type
+        - state
+        - id
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          description: |
+            A URI reference that uniquely identifies the problem type only in the context of the provided API. Opposed to the specification in RFC-9457, it is neither recommended to be dereferenceable and point to a human-readable documentation nor globally unique for the problem type.
+          default: 'about:blank'
+          example: /some/uri-reference
+        title:
+          type: string
+          description: |
+            A short summary of the problem type. Written in English and readable for engineers, usually not suited for non technical stakeholders and not localized.
+          example: some title for the error situation
+        status:
+          type: number
+          format: int32
+          description: |
+            The HTTP status code generated by the origin server for this occurrence of the problem.
+        detail:
+          type: string
+          description: |
+            A human readable explanation specific to this occurrence of the problem that is helpful to locate the problem and give advice on how to proceed. Written in English and readable for engineers, usually not suited for non technical stakeholders and not localized.
+          example: some description for the error situation
+        instance:
+          type: string
+          format: uri-reference
+          description: |
+            A URI reference that identifies the specific occurrence of the problem, e.g. by adding a fragment identifier or sub-path to the problem type. May be used to locate the root of this problem in the source code.
+          example: /some/uri-reference#specific-occurrence-context
+    Smsc:
+      title: Smsc
+      allOf:
+        - $ref: '#/components/schemas/PaginatedSmsc'
+        - type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            contact_information:
+              type: object
+              minProperties: 1
+              additionalProperties: false
+              required:
+                - phone
+                - person_of_contact
+              properties:
+                supplier:
+                  type: string
+                email:
+                  type: string
+                phone:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                person_of_contact:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+          required:
+            - contact_information
+      examples:
+        - name: string
+          description: string
+          type: SENDER
+          state: ENABLED
+          refreshes_in: 0
+          contact_information:
+            supplier: string
+            email: string
+            phone:
+              - string
+            person_of_contact:
+              - string
+    Configuration:
+      title: Configuration
+      type: object
+      additionalProperties: false
+      properties:
+        host:
+          type: string
+        port:
+          type: string
+        sender_address:
+          type: string
+        authentication:
+          type: object
+          required:
+            - id
+            - secret
+          properties:
+            id:
+              type: string
+            secret:
+              type: string
+        opts:
+          type: object
+          properties:
+            keep_alive_timeout:
+              type: number
+              minimum: 1
+            connection_bind_timeout:
+              type: number
+              minimum: 1
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Target'
+      required:
+        - host
+        - port
+        - authentication
+        - targets
+    Target:
+      title: Target
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        pattern:
+          type: string
+      required:
+        - name
+        - description
+        - pattern
+    PaginatedEvent:
+      title: PaginatedEvent
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: object
+          properties:
+            name:
+              type: string
+            audience:
+              type: string
+        created_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+          description: Username of the user who initiated it
+        triggered_by:
+          type: string
+          description: The system used to initiate the event
+      required:
+        - id
+        - type
+        - created_at
+        - triggered_by
+    Event:
+      title: Event
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEvent'
+        - type: object
+          properties:
+            justification:
+              $ref: '#/components/schemas/Justification'
+    Justification:
+      title: Justification
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        category:
+          type: string
+          enum:
+            - MAINTENANCE
+            - ISSUE_SOLVING
+            - OTHER
+        ticket:
+          type: object
+          additionalProperties: false
+          properties:
+            number:
+              type: string
+            opened_in:
+              type: object
+              additionalProperties: false
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                hosted_in:
+                  type: string
+                  enum:
+                    - PREM
+                    - CLOUD
+                    - OTHER
+          required:
+            - number
+            - opened_in
+      required:
+        - reason
+        - category
+  securitySchemes: {}
+  parameters:
+    search:
+      name: s
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Search like
+    page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: number
+        minimum: 1
+    limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: number
+        minimum: 10
+        default: 15
+  responses:
+    Problem:
+      description: '500'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    SmscNotFound:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            Example 1:
+              value:
+                status: 404
+                title: Smsc Not found
+                type: /problems/smsc/not-found
+                detail: 'The smsc[id=''${id}''] doesn''t exist'
+tags:
+  - name: config
+  - name: events
+  - name: smsc

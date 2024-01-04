@@ -1,0 +1,849 @@
+openapi: 3.1.0
+info:
+  title: Gateway Management API
+  version: 1.0.0
+  summary: API that manages clients & sms in Hermes SMS Gateway
+  contact:
+    name: Delfim Marime
+    url: raitonbl.com
+    email: delfimarime@outlook.com
+servers:
+  - url: 'http://localhost:3000'
+paths:
+  /clients:
+    get:
+      summary: Get Clients Page
+      tags:
+        - client
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ResponsePage'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PaginatedClient'
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: getClients
+      parameters:
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - schema:
+            type: boolean
+          in: query
+          name: is_enabled
+    post:
+      summary: Add Client
+      operationId: addClient
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '422':
+          description: Unprocessable Entity (WebDAV)
+        '500':
+          $ref: '#/components/responses/Problem'
+      description: ''
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewClientRequest'
+      tags:
+        - client
+  '/clients/{id}':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    get:
+      summary: Get Specific Client by Id
+      tags:
+        - client
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+              examples: {}
+        '404':
+          $ref: '#/components/responses/ClientNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: findClientById
+      description: ''
+    put:
+      summary: Update Client
+      operationId: setClient
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '404':
+          $ref: '#/components/responses/ClientNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClientRequest'
+      tags:
+        - client
+    delete:
+      summary: Remove Client
+      operationId: deleteClientById
+      responses:
+        '204':
+          description: No Content
+        '404':
+          $ref: '#/components/responses/ClientNotFound'
+        '500':
+          $ref: '#/components/responses/ClientNotFound'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Justification'
+        description: ''
+      tags:
+        - client
+  '/clients/{id}/callback':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    put:
+      summary: Update Client callback
+      operationId: setClientCallback
+      responses:
+        '200':
+          description: OK
+        '404':
+          $ref: '#/components/responses/ClientNotFound'
+        '422':
+          description: Unprocessable Entity (WebDAV)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+      description: ''
+      tags:
+        - client
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Callback'
+  /messages:
+    get:
+      summary: Get messages
+      tags:
+        - message
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ResponsePage'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          anyOf:
+                            - $ref: '#/components/schemas/PaginatedSendMessage'
+                            - $ref: '#/components/schemas/PaginatedReceivedMessage'
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: getMessages
+      description: ''
+      parameters:
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - schema:
+            type: string
+            enum:
+              - +submitted_at
+              - '-submitted_at'
+              - +delivered_at
+              - '-delivered_at'
+              - +from
+              - '-from'
+              - '-to'
+          in: query
+          name: sort
+        - schema:
+            type: string
+            enum:
+              - SEND
+              - RECEIVED
+          in: query
+          name: type
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: from
+        - schema:
+            type: string
+          in: query
+          name: to
+        - schema:
+            type: string
+          in: query
+          name: status
+    post:
+      summary: Send Message
+      operationId: sendMessage
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  submitted_at:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - submitted_at
+        '422':
+          description: Unprocessable Entity (WebDAV)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          $ref: '#/components/responses/ClientNotFound'
+      description: ''
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewSendMessage'
+            examples: {}
+      tags:
+        - message
+  '/messages/{id}':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    get:
+      summary: Get Message by Id
+      tags:
+        - message
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/SendMessage'
+                  - $ref: '#/components/schemas/ReceivedMessage'
+        '404':
+          $ref: '#/components/responses/MessageNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      operationId: findMessageById
+      description: ''
+    delete:
+      summary: Cancel SendMessage by Id
+      operationId: cancelSendById
+      responses:
+        '202':
+          description: Accepted
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                MessageAlreadySent:
+                  value:
+                    status: 403
+                    title: Message already sent
+                    type: /problems/message/cannot-cancel-sent-message
+                    detail: 'The message[id=''${id}''] has been already sent'
+                MessageCannotBeCancelled:
+                  value:
+                    status: 403
+                    title: Cannot cancel message
+                    type: /problems/message/cancelation/not-allowed
+                    detail: 'The message[id=''${id}''] cannot be cancelled'
+        '404':
+          $ref: '#/components/responses/MessageNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      tags:
+        - message
+  '/messages/{id}/retries':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    post:
+      summary: Resend Message
+      operationId: resendMessageById
+      responses:
+        '202':
+          description: Accepted
+          content: {}
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                MessageAlreadySent:
+                  value:
+                    status: 403
+                    title: Message already sent
+                    type: /problems/message/cannot-cancel-sent-message
+                    detail: 'The message[id=''${id}''] has been already sent'
+        '404':
+          $ref: '#/components/responses/MessageNotFound'
+        '500':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Justification'
+      tags:
+        - message
+      description: ''
+  '/messages/{id}/events':
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+    get:
+      summary: Get Message events
+      tags:
+        - message
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ResponsePage'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Event'
+      operationId: getMessageEvents
+      description: ''
+components:
+  schemas:
+    ResponsePage:
+      type: object
+      required:
+        - next
+        - prev
+      properties:
+        self:
+          description: Pagination link|cursor pointing to the current page.
+          type: string
+          format: uri
+        first:
+          description: Pagination link|cursor pointing to the first page.
+          type: string
+          format: uri
+        prev:
+          description: Pagination link|cursor pointing to the previous page.
+          type: string
+          format: uri
+        next:
+          description: Pagination link|cursor pointing to the next page.
+          type: string
+          format: uri
+        last:
+          description: Pagination link|cursor pointing to the last page.
+          type: string
+          format: uri
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          description: |
+            A URI reference that uniquely identifies the problem type only in the context of the provided API. Opposed to the specification in RFC-9457, it is neither recommended to be dereferenceable and point to a human-readable documentation nor globally unique for the problem type.
+          default: 'about:blank'
+          example: /some/uri-reference
+        title:
+          type: string
+          description: |
+            A short summary of the problem type. Written in English and readable for engineers, usually not suited for non technical stakeholders and not localized.
+          example: some title for the error situation
+        status:
+          type: number
+          format: int32
+          description: |
+            The HTTP status code generated by the origin server for this occurrence of the problem.
+        detail:
+          type: string
+          description: |
+            A human readable explanation specific to this occurrence of the problem that is helpful to locate the problem and give advice on how to proceed. Written in English and readable for engineers, usually not suited for non technical stakeholders and not localized.
+          example: some description for the error situation
+        instance:
+          type: string
+          format: uri-reference
+          description: |
+            A URI reference that identifies the specific occurrence of the problem, e.g. by adding a fragment identifier or sub-path to the problem type. May be used to locate the root of this problem in the source code.
+          example: /some/uri-reference#specific-occurrence-context
+    PaginatedEvent:
+      title: PaginatedEvent
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: object
+          properties:
+            name:
+              type: string
+            audience:
+              type: string
+        created_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+          description: Username of the user who initiated it
+        triggered_by:
+          type: string
+          description: The system used to initiate the event
+      required:
+        - id
+        - type
+        - created_at
+        - triggered_by
+    Event:
+      title: Event
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEvent'
+        - type: object
+          properties:
+            justification:
+              $ref: '#/components/schemas/Justification'
+    PaginatedClient:
+      title: PaginatedClient
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        client_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/Type'
+        is_enabled:
+          type: boolean
+      required:
+        - id
+        - client_id
+        - name
+        - type
+        - is_enabled
+    Client:
+      title: Client
+      allOf:
+        - $ref: '#/components/schemas/PaginatedClient'
+        - type: object
+          properties:
+            created_at:
+              type: string
+            created_by:
+              type: string
+            managed_by:
+              type: object
+              additionalProperties: false
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                id:
+                  type: string
+                  format: uuid
+                server_ip:
+                  type: string
+            callback:
+              $ref: '#/components/schemas/Callback'
+    Callback:
+      title: Callback
+      type: object
+      properties:
+        url:
+          type: string
+        method:
+          type: string
+          enum:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+        request:
+          type: object
+          properties:
+            body:
+              type: string
+            headers:
+              type:
+                - object
+              additionalProperties: false
+              minProperties: 1
+        security:
+          allOf:
+            - additionalProperties: false
+              properties:
+                type:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+              required:
+                - type
+                - username
+                - password
+            - properties:
+                type:
+                  type: string
+                  enum:
+                    - TOKEN
+                header:
+                  type: string
+                  default: Authorization
+                token:
+                  type: string
+              required:
+                - type
+                - header
+                - token
+            - properties:
+                type:
+                  type: string
+                client_id:
+                  type: string
+                client_secret:
+                  type: string
+                token_url:
+                  type: string
+              required:
+                - type
+                - client_id
+                - client_secret
+                - token_url
+          type: object
+    Type:
+      title: Type
+      type: string
+      enum:
+        - BACKEND
+        - FRONTEND
+    NewClientRequest:
+      title: NewClientRequest
+      allOf:
+        - type: object
+          properties:
+            callback:
+              $ref: '#/components/schemas/Callback'
+        - $ref: '#/components/schemas/UpdateClientRequest'
+    UpdateClientRequest:
+      title: UpdateClientRequest
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/Type'
+        is_enabled:
+          type: boolean
+          default: false
+      required:
+        - name
+        - description
+        - type
+        - is_enabled
+    Justification:
+      title: Justification
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        category:
+          type: string
+          enum:
+            - MAINTENANCE
+            - ISSUE_SOLVING
+            - OTHER
+        ticket:
+          type: object
+          additionalProperties: false
+          properties:
+            number:
+              type: string
+            opened_in:
+              type: object
+              additionalProperties: false
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                hosted_in:
+                  type: string
+                  enum:
+                    - PREM
+                    - CLOUD
+                    - OTHER
+          required:
+            - number
+            - opened_in
+      required:
+        - reason
+        - category
+    PaginatedSendMessage:
+      title: PaginatedSendMessage
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        from:
+          $ref: '#/components/schemas/Describable'
+        to:
+          type: string
+        through:
+          $ref: '#/components/schemas/Describable'
+        status:
+          type: string
+          enum:
+            - SUBMITTED
+            - SENT
+            - DELIVERED
+            - ERROR
+        submitted_at:
+          type: string
+          format: date-time
+    PaginatedReceivedMessage:
+      title: PaginatedReceivedMessage
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        from:
+          type: string
+        to:
+          $ref: '#/components/schemas/Describable'
+        through:
+          $ref: '#/components/schemas/Describable'
+        status:
+          type: string
+          enum:
+            - DELIVERED
+            - AFTER_CALLBACK
+            - ERROR
+        submitted_at:
+          type: string
+          format: date-time
+    Describable:
+      title: Describable
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+    SendMessage:
+      title: SendMessage
+      allOf:
+        - $ref: '#/components/schemas/PaginatedSendMessage'
+        - type: object
+          additionalProperties: false
+          properties:
+            smsc_message:
+              type: object
+              additionalProperties: false
+              properties:
+                id:
+                  type: string
+              required:
+                - id
+            delivered_at:
+              type: string
+              format: date-time
+            tags:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items:
+                type: string
+    ReceivedMessage:
+      title: ReceivedMessage
+      allOf:
+        - $ref: '#/components/schemas/PaginatedReceivedMessage'
+        - type: object
+          additionalProperties: false
+          properties:
+            smsc_message:
+              type: object
+              additionalProperties: false
+              properties:
+                id:
+                  type: string
+              required:
+                - id
+            callback:
+              type: object
+              properties:
+                id:
+                  type: string
+                url:
+                  type: string
+                  format: uri
+                created_at:
+                  type: string
+                  format: date-time
+    NewSendMessage:
+      title: NewSendMessage
+      type: object
+      properties:
+        to:
+          type: string
+        content:
+          type: string
+        tags:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items:
+            type: string
+        can_split:
+          type: boolean
+          default: false
+      required:
+        - to
+        - content
+  securitySchemes: {}
+  parameters:
+    search:
+      name: s
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Search like
+    page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: number
+        minimum: 1
+    limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: number
+        minimum: 10
+        default: 15
+  responses:
+    Problem:
+      description: '500'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ClientNotFound:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            Example 1:
+              value:
+                status: 404
+                title: Client Not found
+                type: /problems/client/not-found
+                detail: 'The client[id=''${id}''] doesn''t exist'
+    MessageNotFound:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            Example 1:
+              value:
+                status: 404
+                title: Message Not found
+                type: /problems/message/not-found
+                detail: 'The message[id=''${id}''] doesn''t exist'
+tags:
+  - name: client
+  - name: message

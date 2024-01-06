@@ -9,8 +9,9 @@ import (
 )
 
 type Connector struct {
-	sourceAddress string
-	client        SmppClient
+	SupportsDeliveryReport bool
+	sourceAddress          string
+	client                 SmppClient
 }
 
 func (instance *Connector) DoBind() error {
@@ -26,11 +27,15 @@ func (instance *Connector) SendMessage(id, destination, message string) error {
 	if msgId == "" {
 		msgId = uuid.New().String()
 	}
+	deliverySetting := pdufield.NoDeliveryReceipt
+	if instance.SupportsDeliveryReport {
+		deliverySetting = pdufield.FinalDeliveryReceipt
+	}
 	_, err := instance.client.Submit(&smpp.ShortMessage{
 		Dst:      destination,
 		Text:     pdutext.Raw(message),
 		Src:      instance.sourceAddress,
-		Register: pdufield.NoDeliveryReceipt,
+		Register: deliverySetting,
 		TLVFields: pdutlv.Fields{
 			pdutlv.TagReceiptedMessageID: pdutlv.CString(msgId),
 		},

@@ -12,11 +12,11 @@ type ConnectorFactory struct {
 }
 
 func (instance *ConnectorFactory) New(config model.Smpp) *Connector {
-	c := &Connector{
-		sourceAddress: config.SourceAddr,
-		client:        instance.newSmppClientFrom(config),
+	return &Connector{
+		sourceAddress:          config.SourceAddr,
+		client:                 instance.newSmppClientFrom(config),
+		SupportsDeliveryReport: config.Type != model.TransmitterType,
 	}
-	return c
 }
 
 func (instance *ConnectorFactory) newSmppClientFrom(config model.Smpp) SmppClient {

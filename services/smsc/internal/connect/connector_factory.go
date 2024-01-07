@@ -14,10 +14,12 @@ type ConnectorFactory struct {
 
 func (instance *ConnectorFactory) New(config model.Smpp) *Connector {
 	c := &Connector{
-		Id:                     config.Id,
-		sourceAddress:          config.SourceAddr,
-		SmsEventListener:       instance.SmsEventListener,
-		SupportsDeliveryReport: config.Type != model.TransmitterType,
+		id:                  config.Id,
+		sourceAddress:       config.SourceAddr,
+		smsEventListener:    instance.SmsEventListener,
+		state:               StartupConnectorLifecycleState,
+		submitsMessage:      config.Type != model.ReceiverType,
+		awaitDeliveryReport: config.Type != model.TransmitterType,
 	}
 	c.client = instance.newSmppClientFrom(config, c.Listen)
 	return c

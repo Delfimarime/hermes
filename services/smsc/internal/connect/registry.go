@@ -42,26 +42,27 @@ func (instance *ConnectorRegistry) Start() error {
 			defer wg.Done()
 			select {
 			case <-ctx.Done():
-				instance.Logger.Warn("Cannot bind smsc[id="+c.Id+"]",
-					zap.String("smsc_id", c.Id),
+				instance.Logger.Warn("Cannot bind smsc[id="+c.id+"]",
+					zap.String("smsc_id", c.id),
 					zap.String("smsc_name", def.Name),
 					zap.Int64("duration", instance.Configuration.Smsc.StartupTimeout),
 				)
 			case problem := <-instance.bindConnector(c):
 				if problem != nil {
-					instance.Logger.Error("Cannot bind smsc[id="+c.Id+"]",
-						zap.String("smsc_id", c.Id),
+					instance.Logger.Error("Cannot bind smsc[id="+c.id+"]",
+						zap.String("smsc_id", c.id),
 						zap.String("smsc_name", def.Name),
 						zap.Error(problem),
 					)
 				} else {
-					instance.Logger.Info("Bind smsc[id="+c.Id+"]",
-						zap.String("smsc_id", c.Id),
+					instance.Logger.Info("Bind smsc[id="+c.id+"]",
+						zap.String("smsc_id", c.id),
 						zap.String("smsc_name", def.Name),
 					)
 				}
 			}
-			instance.cache[c.Id] = c
+			c.state = ReadyConnectorLifecycleState
+			instance.cache[c.id] = c
 		}(definition, connector)
 	}
 	wg.Wait()
@@ -78,8 +79,8 @@ func (instance *ConnectorRegistry) Close() error {
 		each := v
 		if err := each.Close(); err != nil {
 			if err != nil {
-				instance.Logger.Error("Cannot close smsc[id="+v.Id+"]",
-					zap.String("smsc_id", v.Id),
+				instance.Logger.Error("Cannot close smsc[id="+v.id+"]",
+					zap.String("smsc_id", v.id),
 					zap.Error(err),
 				)
 			}

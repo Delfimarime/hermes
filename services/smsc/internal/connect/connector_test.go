@@ -104,7 +104,7 @@ type TestReceivedSmsRequestListener struct {
 
 func (instance *TestReceivedSmsRequestListener) OnSmsRequest(request ReceivedSmsRequest) {
 	fmt.Println("---------ReceivedSmsRequest----------------")
-	fmt.Println("Id", request.Id)
+	fmt.Println("id", request.Id)
 	fmt.Println("From", request.From)
 	fmt.Println("SmscId", request.SmscId)
 	fmt.Println("Message", request.Message)
@@ -112,7 +112,7 @@ func (instance *TestReceivedSmsRequestListener) OnSmsRequest(request ReceivedSms
 
 func (instance *TestReceivedSmsRequestListener) OnSmsDelivered(request SmsDeliveryRequest) {
 	fmt.Println("----------SmsDeliveryRequest--------------")
-	fmt.Println("Id", request.Id)
+	fmt.Println("id", request.Id)
 	fmt.Println("SmscId", request.SmscId)
 	fmt.Println("Status", request.Status)
 }

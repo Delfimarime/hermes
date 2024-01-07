@@ -1,6 +1,7 @@
 package connect
 
 import (
+	"errors"
 	"github.com/fiorix/go-smpp/smpp"
 	"github.com/fiorix/go-smpp/smpp/pdu"
 	"github.com/fiorix/go-smpp/smpp/pdu/pdufield"
@@ -9,12 +10,19 @@ import (
 	"time"
 )
 
+const (
+	StartupConnectorLifecycleState = "STARTUP"
+	ReadyConnectorLifecycleState   = "READY"
+)
+
 type Connector struct {
-	SupportsDeliveryReport bool
-	Id                     string
-	sourceAddress          string
-	client                 SmppClient
-	SmsEventListener       SmsEventListener
+	awaitDeliveryReport bool
+	submitsMessage      bool
+	id                  string
+	sourceAddress       string
+	state               string
+	client              SmppClient
+	smsEventListener    SmsEventListener
 }
 
 func (instance *Connector) Close() error {
@@ -26,8 +34,14 @@ func (instance *Connector) Refresh() error {
 }
 
 func (instance *Connector) SendMessage(destination, message string) (string, error) {
+	if !instance.submitsMessage {
+		return "", errors.New("connector isn't allowed to send sms")
+	}
+	if instance.state != ReadyConnectorLifecycleState {
+		return "", errors.New("connector cannot to send sms due to state=" + instance.state)
+	}
 	deliverySetting := pdufield.NoDeliveryReceipt
-	if instance.SupportsDeliveryReport {
+	if instance.awaitDeliveryReport {
 		deliverySetting = pdufield.FinalDeliveryReceipt
 	}
 	sm, err := instance.client.Submit(&smpp.ShortMessage{
@@ -62,7 +76,7 @@ func (instance *Connector) onDeliverySM(p pdu.Body) {
 		fromRequest := getPduObject(p)
 		r := ReceivedSmsRequest{
 			ReceivedAt: receivedAt,
-			SmscId:     instance.Id,
+			SmscId:     instance.id,
 			Message:    fromRequest.content,
 		}
 		if fromRequest.messageId != "" {
@@ -71,12 +85,12 @@ func (instance *Connector) onDeliverySM(p pdu.Body) {
 		if fromRequest.sourceAddr != "" {
 			r.From = fromRequest.sourceAddr
 		}
-		instance.SmsEventListener.OnSmsRequest(r)
+		instance.smsEventListener.OnSmsRequest(r)
 		break
 	case 0x04:
-		instance.SmsEventListener.OnSmsDelivered(SmsDeliveryRequest{
+		instance.smsEventListener.OnSmsDelivered(SmsDeliveryRequest{
 			ReceivedAt: time.Now(),
-			SmscId:     instance.Id,
+			SmscId:     instance.id,
 			Status:     int(p.Header().Status),
 			Id:         p.TLVFields()[pdutlv.TagReceiptedMessageID].String(),
 		})

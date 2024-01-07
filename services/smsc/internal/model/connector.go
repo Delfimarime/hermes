@@ -8,6 +8,10 @@ const (
 
 type Smpp struct {
 	Id          string
+	Name        string
+	Description string
+	PoweredBy   string
+	Contact     []Person
 	Type        string
 	SourceAddr  string
 	ServiceType string

@@ -46,17 +46,17 @@ func (instance *ConnectorFactory) newSmppClient(config model.Smpp, dType reflect
 	smppObject.Elem().FieldByName("Passwd").Set(reflect.ValueOf(config.Host.Password))
 	smppObject.Elem().FieldByName("SystemType").Set(reflect.ValueOf(config.ServiceType))
 	if config.Bind != nil {
-		t := time.Duration(config.Bind.Timeout * int64(time.Nanosecond))
+		t := MillisToDuration(config.Bind.Timeout)
 		bindInterval = &t
 	}
 	if config.Enquire != nil {
-		t := time.Duration(config.Enquire.Link * int64(time.Nanosecond))
+		t := MillisToDuration(config.Enquire.Link)
 		enquireLinkTimeout = &t
-		v := time.Duration(config.Enquire.LinkTimeout * int64(time.Nanosecond))
+		v := MillisToDuration(config.Enquire.LinkTimeout)
 		enquireLinkTimeout = &v
 	}
 	if config.Response != nil {
-		t := time.Duration(config.Response.Timeout * int64(time.Nanosecond))
+		t := MillisToDuration(config.Response.Timeout)
 		responseTimeout = &t
 	}
 
@@ -77,9 +77,9 @@ func (instance *ConnectorFactory) newSmppClient(config model.Smpp, dType reflect
 	if isReceiver || isTransceiver {
 		if isReceiver && config.Merge != nil {
 			smppObject.Elem().FieldByName("MergeInterval").
-				Set(reflect.ValueOf(time.Duration(config.Merge.Interval * int64(time.Nanosecond))))
+				Set(reflect.ValueOf(MillisToDuration(config.Merge.Interval)))
 			smppObject.Elem().FieldByName("MergeCleanupInterval").
-				Set(reflect.ValueOf(time.Duration(config.Merge.CleanupInterval * int64(time.Nanosecond))))
+				Set(reflect.ValueOf(MillisToDuration(config.Merge.CleanupInterval)))
 		}
 		if instance.SmsEventListener != nil {
 			smppObject.Elem().FieldByName("Handler").Set(reflect.ValueOf(f))

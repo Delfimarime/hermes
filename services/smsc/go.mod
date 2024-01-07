@@ -9,4 +9,8 @@ require (
 	github.com/google/uuid v1.5.0
 )
 
-require golang.org/x/text v0.3.6 // indirect
+require (
+	go.uber.org/multierr v1.11.0 // indirect
+	go.uber.org/zap v1.26.0 // indirect
+	golang.org/x/text v0.3.6 // indirect
+)

@@ -17,11 +17,11 @@ type Connector struct {
 	SmsEventListener       SmsEventListener
 }
 
-func (instance *Connector) DoBind() error {
-	conn := instance.client.Bind()
-	if status := <-conn; status.Error() != nil {
-		return status.Error()
-	}
+func (instance *Connector) Close() error {
+	return instance.client.Close()
+}
+
+func (instance *Connector) Refresh() error {
 	return nil
 }
 
@@ -44,6 +44,14 @@ func (instance *Connector) Listen(p pdu.Body) {
 	case pdu.DeliverSMID:
 		instance.onDeliverySM(p)
 	}
+}
+
+func (instance *Connector) doBind() error {
+	conn := instance.client.Bind()
+	if status := <-conn; status.Error() != nil {
+		return status.Error()
+	}
+	return nil
 }
 
 func (instance *Connector) onDeliverySM(p pdu.Body) {
@@ -74,8 +82,4 @@ func (instance *Connector) onDeliverySM(p pdu.Body) {
 		})
 		break
 	}
-}
-
-func (instance *Connector) Close() error {
-	return instance.client.Close()
 }

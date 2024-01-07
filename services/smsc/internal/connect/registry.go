@@ -92,7 +92,7 @@ func (instance *ConnectorRegistry) Close() error {
 func (instance *ConnectorRegistry) bindConnector(connector *Connector) <-chan error {
 	ch := make(chan error, 1)
 	go func() {
-		err := connector.DoBind()
+		err := connector.doBind()
 		ch <- err
 		close(ch)
 	}()

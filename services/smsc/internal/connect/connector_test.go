@@ -21,7 +21,7 @@ func TestConnector_SendMessage(t *testing.T) {
 		},
 		Type: model.TransmitterType,
 	})
-	err := c.DoBind()
+	err := c.doBind()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestConnector_Listen(t *testing.T) {
 		},
 		Type: model.ReceiverType,
 	})
-	err := c.DoBind()
+	err := c.doBind()
 	if err != nil {
 		t.Error(err)
 		return
@@ -79,7 +79,7 @@ func TestConnector_SendMessageAndListen(t *testing.T) {
 		},
 		Type: model.TransceiverType,
 	})
-	err := c.DoBind()
+	err := c.doBind()
 	if err != nil {
 		t.Error(err)
 		return

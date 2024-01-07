@@ -6,15 +6,15 @@ import (
 )
 
 type SmppReceiverClientAdapter struct {
-	receiver *smpp.Receiver
+	target *smpp.Receiver
 }
 
 func (instance *SmppReceiverClientAdapter) Close() error {
-	return instance.receiver.Close()
+	return instance.target.Close()
 }
 
 func (instance *SmppReceiverClientAdapter) Bind() <-chan smpp.ConnStatus {
-	return instance.receiver.Bind()
+	return instance.target.Bind()
 }
 
 func (instance *SmppReceiverClientAdapter) Submit(sm *smpp.ShortMessage) (*smpp.ShortMessage, error) {

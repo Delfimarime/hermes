@@ -12,27 +12,30 @@ type ConnectorFactory struct {
 }
 
 func (instance *ConnectorFactory) New(config model.Smpp) *Connector {
-	return &Connector{
+	c := &Connector{
+		Id:                     config.Id,
 		sourceAddress:          config.SourceAddr,
-		client:                 instance.newSmppClientFrom(config),
+		SmsEventListener:       instance.SmsEventListener,
 		SupportsDeliveryReport: config.Type != model.TransmitterType,
 	}
+	c.client = instance.newSmppClientFrom(config, c.Listen)
+	return c
 }
 
-func (instance *ConnectorFactory) newSmppClientFrom(config model.Smpp) SmppClient {
+func (instance *ConnectorFactory) newSmppClientFrom(config model.Smpp, f smpp.HandlerFunc) SmppClient {
 	switch config.Type {
-	case model.TransmitterType:
-		return instance.newSmppClient(config, reflect.TypeOf(smpp.Transmitter{}))
-	case model.TransceiverType:
-		return instance.newSmppClient(config, reflect.TypeOf(smpp.Transceiver{}))
 	case model.ReceiverType:
-		return instance.newSmppClient(config, reflect.TypeOf(smpp.Receiver{}))
+		return instance.newSmppClient(config, reflect.TypeOf(smpp.Receiver{}), f)
+	case model.TransmitterType:
+		return instance.newSmppClient(config, reflect.TypeOf(smpp.Transmitter{}), f)
+	case model.TransceiverType:
+		return instance.newSmppClient(config, reflect.TypeOf(smpp.Transceiver{}), f)
 	default:
 		return nil
 	}
 }
 
-func (instance *ConnectorFactory) newSmppClient(config model.Smpp, dType reflect.Type) SmppClient {
+func (instance *ConnectorFactory) newSmppClient(config model.Smpp, dType reflect.Type, f smpp.HandlerFunc) SmppClient {
 	var bindInterval *time.Duration
 	var enquireLink *time.Duration
 	var responseTimeout *time.Duration
@@ -79,12 +82,11 @@ func (instance *ConnectorFactory) newSmppClient(config model.Smpp, dType reflect
 				Set(reflect.ValueOf(time.Duration(config.Merge.CleanupInterval * int64(time.Nanosecond))))
 		}
 		if instance.SmsEventListener != nil {
-			smppObject.Elem().FieldByName("Handler").
-				Set(reflect.ValueOf(NewPduListener(config.Id, instance.SmsEventListener)))
+			smppObject.Elem().FieldByName("Handler").Set(reflect.ValueOf(f))
 		}
 	}
 	if isReceiver {
-		return &SmppReceiverClientAdapter{receiver: smppObject.Interface().(*smpp.Receiver)}
+		return &SmppReceiverClientAdapter{target: smppObject.Interface().(*smpp.Receiver)}
 	}
 	return smppObject.Interface().(SmppClient)
 }

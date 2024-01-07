@@ -33,7 +33,7 @@ func TestConnector_SendMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = c.SendMessage(uuid.New().String(), "+258842102217", "Hi")
+	_, err = c.SendMessage("+258842102217", "Hi")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,21 +65,54 @@ func TestConnector_Listen(t *testing.T) {
 	time.Sleep(30 * time.Second)
 }
 
+func TestConnector_SendMessageAndListen(t *testing.T) {
+	f := ConnectorFactory{
+		SmsEventListener: &TestReceivedSmsRequestListener{},
+	}
+	c := f.New(model.Smpp{
+		Id: uuid.New().String(),
+		//SourceAddr:  "vm.co.mz",
+		Host: model.Host{
+			Address:  "127.0.0.1:2775",
+			Username: "transmitter",
+			Password: "admin",
+		},
+		Type: model.TransceiverType,
+	})
+	err := c.DoBind()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	go func() {
+		_, err = c.SendMessage("+258842102217", "Hi")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}()
+	/*
+		go func() {
+			TestConnector_SendMessage(t)
+		}()
+	*/
+	time.Sleep(30 * time.Second)
+}
+
 type TestReceivedSmsRequestListener struct {
 }
 
 func (instance *TestReceivedSmsRequestListener) OnSmsRequest(request ReceivedSmsRequest) {
-	fmt.Println("--------------------------")
+	fmt.Println("---------ReceivedSmsRequest----------------")
 	fmt.Println("Id", request.Id)
 	fmt.Println("From", request.From)
 	fmt.Println("SmscId", request.SmscId)
 	fmt.Println("Message", request.Message)
 }
 
-func (instance *TestReceivedSmsRequestListener) OnSmsDelivered(request SmsDeliveryResponse) {
-	fmt.Println("--------------------------")
+func (instance *TestReceivedSmsRequestListener) OnSmsDelivered(request SmsDeliveryRequest) {
+	fmt.Println("----------SmsDeliveryRequest--------------")
 	fmt.Println("Id", request.Id)
 	fmt.Println("SmscId", request.SmscId)
 	fmt.Println("Status", request.Status)
-	fmt.Println("CorrelationId", request.CorrelationId)
 }

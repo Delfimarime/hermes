@@ -1,0 +1,11 @@
+version: '3'
+services:
+  smppsim:
+    container_name: smpp
+    image: smppsim:latest
+    volumes:
+      - ./dist/conf/smppsim.props:/app/conf/smppsim.props
+      - ./dist/conf/logging.properties:/app/conf/logging.properties
+    ports:
+      - "8884:8884"
+      - "2775:2775"

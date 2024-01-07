@@ -3,6 +3,7 @@ package connect
 import (
 	"context"
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
+	"github.com/delfimarime/hermes/services/smsc/pkg/common"
 	"github.com/delfimarime/hermes/services/smsc/pkg/config"
 	"go.uber.org/zap"
 	"sync"
@@ -32,7 +33,7 @@ func (instance *ConnectorRegistry) Start() error {
 	}
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithTimeout(context.Background(),
-		MillisToDuration(instance.Configuration.Smsc.StartupTimeout))
+		common.MillisToDuration(instance.Configuration.Smsc.StartupTimeout))
 	defer cancel()
 	for _, definition := range seq {
 		connector := instance.ConnectorFactory.New(definition)
@@ -67,15 +68,6 @@ func (instance *ConnectorRegistry) Start() error {
 	return nil
 }
 
-func (instance *ConnectorRegistry) bindConnector(connector *Connector) <-chan error {
-	ch := make(chan error, 1)
-	go func() {
-		err := connector.DoBind()
-		ch <- err
-		close(ch)
-	}()
-	return ch
-}
 func (instance *ConnectorRegistry) Close() error {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
@@ -95,4 +87,14 @@ func (instance *ConnectorRegistry) Close() error {
 	}
 	instance.cache = nil
 	return nil
+}
+
+func (instance *ConnectorRegistry) bindConnector(connector *Connector) <-chan error {
+	ch := make(chan error, 1)
+	go func() {
+		err := connector.DoBind()
+		ch <- err
+		close(ch)
+	}()
+	return ch
 }

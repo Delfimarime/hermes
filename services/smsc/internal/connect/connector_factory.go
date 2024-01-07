@@ -2,6 +2,7 @@ package connect
 
 import (
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
+	"github.com/delfimarime/hermes/services/smsc/pkg/common"
 	"github.com/fiorix/go-smpp/smpp"
 	"reflect"
 	"time"
@@ -46,17 +47,17 @@ func (instance *ConnectorFactory) newSmppClient(config model.Smpp, dType reflect
 	smppObject.Elem().FieldByName("Passwd").Set(reflect.ValueOf(config.Host.Password))
 	smppObject.Elem().FieldByName("SystemType").Set(reflect.ValueOf(config.ServiceType))
 	if config.Bind != nil {
-		t := MillisToDuration(config.Bind.Timeout)
+		t := common.MillisToDuration(config.Bind.Timeout)
 		bindInterval = &t
 	}
 	if config.Enquire != nil {
-		t := MillisToDuration(config.Enquire.Link)
+		t := common.MillisToDuration(config.Enquire.Link)
 		enquireLinkTimeout = &t
-		v := MillisToDuration(config.Enquire.LinkTimeout)
+		v := common.MillisToDuration(config.Enquire.LinkTimeout)
 		enquireLinkTimeout = &v
 	}
 	if config.Response != nil {
-		t := MillisToDuration(config.Response.Timeout)
+		t := common.MillisToDuration(config.Response.Timeout)
 		responseTimeout = &t
 	}
 
@@ -77,9 +78,9 @@ func (instance *ConnectorFactory) newSmppClient(config model.Smpp, dType reflect
 	if isReceiver || isTransceiver {
 		if isReceiver && config.Merge != nil {
 			smppObject.Elem().FieldByName("MergeInterval").
-				Set(reflect.ValueOf(MillisToDuration(config.Merge.Interval)))
+				Set(reflect.ValueOf(common.MillisToDuration(config.Merge.Interval)))
 			smppObject.Elem().FieldByName("MergeCleanupInterval").
-				Set(reflect.ValueOf(MillisToDuration(config.Merge.CleanupInterval)))
+				Set(reflect.ValueOf(common.MillisToDuration(config.Merge.CleanupInterval)))
 		}
 		if instance.SmsEventListener != nil {
 			smppObject.Elem().FieldByName("Handler").Set(reflect.ValueOf(f))

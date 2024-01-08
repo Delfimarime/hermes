@@ -14,6 +14,7 @@ type Smpp struct {
 	Contact     []Person
 	Type        string
 	Settings    Settings
+	Alias       string
 }
 
 type Settings struct {

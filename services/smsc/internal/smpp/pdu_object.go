@@ -1,4 +1,4 @@
-package pkg
+package smpp
 
 import (
 	"github.com/fiorix/go-smpp/smpp/pdu"

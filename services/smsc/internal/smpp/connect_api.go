@@ -8,6 +8,7 @@ import (
 const (
 	StartupConnectorLifecycleState = "STARTUP"
 	ReadyConnectorLifecycleState   = "READY"
+	ErrorConnectorLifecycleState   = "ERROR"
 )
 
 type Client interface {
@@ -36,6 +37,7 @@ type ConnectorManager interface {
 	Close() error
 	Refresh(id string) error
 	AfterPropertiesSet() error
+	StateOf(id string) string
 }
 
 type ConnectorFactory interface {

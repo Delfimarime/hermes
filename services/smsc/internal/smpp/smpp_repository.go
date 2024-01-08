@@ -1,4 +1,4 @@
-package pkg
+package smpp
 
 import "github.com/delfimarime/hermes/services/smsc/internal/model"
 

@@ -1,4 +1,4 @@
-package connect
+package smpp
 
 import (
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
@@ -8,37 +8,61 @@ import (
 	"time"
 )
 
-type ConnectorFactory struct {
-	SmsEventListener SmsEventListener
+type SimpleConnectorFactory struct {
 }
 
-func (instance *ConnectorFactory) New(config model.Smpp) *Connector {
-	c := &Connector{
-		id:                  config.Id,
-		sourceAddress:       config.SourceAddr,
-		smsEventListener:    instance.SmsEventListener,
-		state:               StartupConnectorLifecycleState,
-		submitsMessage:      config.Type != model.ReceiverType,
-		awaitDeliveryReport: config.Type != model.TransmitterType,
+func (instance *SimpleConnectorFactory) NewListenerConnector(
+	config model.Smpp, f smpp.HandlerFunc) Connector {
+	target := instance.newNoOpConnector(config, model.ReceiverType, f)
+	return &target
+}
+
+func (instance *SimpleConnectorFactory) NewTransmitterConnector(
+	config model.Smpp, f smpp.HandlerFunc) Connector {
+	awaitDeliveryReport := f != nil
+	if config.Settings.Delivery != nil {
+		awaitDeliveryReport = config.Settings.Delivery.AwaitReport
 	}
-	c.client = instance.newSmppClientFrom(config, c.Listen)
-	return c
+	definitionType := model.TransmitterType
+	if f != nil {
+		definitionType = model.TransceiverType
+	}
+	return &TransmitterClientConnector{
+		awaitDeliveryReport: awaitDeliveryReport,
+		NoOpConnector:       instance.newNoOpConnector(config, definitionType, f),
+	}
 }
 
-func (instance *ConnectorFactory) newSmppClientFrom(config model.Smpp, f smpp.HandlerFunc) SmppClient {
-	switch config.Type {
-	case model.ReceiverType:
-		return instance.newSmppClient(config, reflect.TypeOf(smpp.Receiver{}), f)
+func (instance *SimpleConnectorFactory) newNoOpConnector(
+	config model.Smpp, definitionType string, f smpp.HandlerFunc) NoOpConnector {
+	return NoOpConnector{
+		smppClient: instance.newSmppClientFrom(config.Settings, definitionType, f),
+	}
+}
+
+func (instance *SimpleConnectorFactory) newSmppClientFrom(config model.Settings, definitionType string, f smpp.HandlerFunc) Client {
+	switch definitionType {
+	case model.ReceiverType, model.TransceiverType:
+		var sample any
+		if definitionType == model.ReceiverType {
+			sample = smpp.Receiver{}
+		} else {
+			sample = smpp.Transceiver{}
+		}
+		return instance.withHandlerFunction(instance.newSmppClient(config, reflect.TypeOf(sample)), f)
 	case model.TransmitterType:
-		return instance.newSmppClient(config, reflect.TypeOf(smpp.Transmitter{}), f)
-	case model.TransceiverType:
-		return instance.newSmppClient(config, reflect.TypeOf(smpp.Transceiver{}), f)
+		return instance.newSmppClient(config, reflect.TypeOf(smpp.Transmitter{}))
 	default:
 		return nil
 	}
 }
 
-func (instance *ConnectorFactory) newSmppClient(config model.Smpp, dType reflect.Type, f smpp.HandlerFunc) SmppClient {
+func (instance *SimpleConnectorFactory) withHandlerFunction(client Client, f smpp.HandlerFunc) Client {
+	reflect.ValueOf(client).Elem().FieldByName("Handler").Set(reflect.ValueOf(f))
+	return client
+}
+
+func (instance *SimpleConnectorFactory) newSmppClient(config model.Settings, dType reflect.Type) Client {
 	var bindInterval *time.Duration
 	var enquireLink *time.Duration
 	var responseTimeout *time.Duration
@@ -84,12 +108,6 @@ func (instance *ConnectorFactory) newSmppClient(config model.Smpp, dType reflect
 			smppObject.Elem().FieldByName("MergeCleanupInterval").
 				Set(reflect.ValueOf(common.MillisToDuration(config.Merge.CleanupInterval)))
 		}
-		if instance.SmsEventListener != nil {
-			smppObject.Elem().FieldByName("Handler").Set(reflect.ValueOf(f))
-		}
 	}
-	if isReceiver {
-		return &SmppReceiverClientAdapter{target: smppObject.Interface().(*smpp.Receiver)}
-	}
-	return smppObject.Interface().(SmppClient)
+	return smppObject.Interface().(Client)
 }

@@ -13,6 +13,10 @@ type Smpp struct {
 	PoweredBy   string
 	Contact     []Person
 	Type        string
+	Settings    Settings
+}
+
+type Settings struct {
 	SourceAddr  string
 	ServiceType string
 	Host        Host
@@ -20,6 +24,11 @@ type Smpp struct {
 	Merge       *Merge
 	Enquire     *Enquire
 	Response    *Response
+	Delivery    *Delivery
+}
+
+type Delivery struct {
+	AwaitReport bool
 }
 
 type Host struct {

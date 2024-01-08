@@ -1,4 +1,4 @@
-package connect
+package pkg
 
 import "github.com/delfimarime/hermes/services/smsc/internal/model"
 

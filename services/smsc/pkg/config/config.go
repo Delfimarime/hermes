@@ -3,7 +3,7 @@ package config
 type Configuration struct {
 	Smsc          Smsc
 	Logger        Logger
-	OpenTelemetry OpenTelemetry
+	OpenTelemetry *OpenTelemetry
 }
 
 type Smsc struct {

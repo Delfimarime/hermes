@@ -21,6 +21,9 @@ func (instance *TransmitterClientConnector) SendMessage(destination, message str
 		Register: deliverySetting,
 		Text:     pdutext.Raw(message),
 	})
+	if err != nil {
+		return SendMessageResponse{}, err
+	}
 	return SendMessageResponse{
 		Id: sm.Resp().Fields()[pdufield.MessageID].String(),
 	}, err

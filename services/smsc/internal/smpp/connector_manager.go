@@ -17,7 +17,7 @@ type SimpleConnectorManager struct {
 	mutex              sync.Mutex
 	repository         SmppRepository
 	connectorFactory   ConnectorFactory
-	pduListenerFactory PduListenerFactory
+	pduListenerFactory *PduListenerFactory
 	configuration      config.Configuration
 	cache              map[string]ManagedConnector
 }
@@ -103,6 +103,7 @@ func (instance *SimpleConnectorManager) doBindConnector(ctx context.Context, wg 
 	if err != nil {
 		zap.L().Error("Cannot create metrics for smsc[id="+connector.GetId()+"]",
 			zap.String("smsc_id", def.Id),
+			zap.String("smsc_alias", def.Alias),
 			zap.String("smsc_name", def.Name),
 			zap.Error(err),
 		)
@@ -114,20 +115,23 @@ func (instance *SimpleConnectorManager) doBindConnector(ctx context.Context, wg 
 		case <-ctx.Done():
 			zap.L().Warn("Cannot bind smsc[id="+def.Id+"]",
 				zap.String("smsc_id", def.Id),
+				zap.String("smsc_alias", def.Alias),
 				zap.String("smsc_name", def.Name),
 				zap.Int64("duration", instance.configuration.Smsc.StartupTimeout),
 			)
 			status = ErrorConnectorLifecycleState
-		case err := <-instance.bindConnector(connector):
-			if err != nil {
+		case prob := <-instance.bindConnector(connector):
+			if prob != nil {
 				zap.L().Error("Cannot bind smsc[id="+connector.GetId()+"]",
 					zap.String("smsc_id", def.Id),
+					zap.String("smsc_alias", def.Alias),
 					zap.String("smsc_name", def.Name),
-					zap.Error(err),
+					zap.Error(prob),
 				)
 			} else {
 				zap.L().Info("Bind smsc[id="+connector.GetId()+"]",
 					zap.String("smsc_id", def.Id),
+					zap.String("smsc_alias", def.Alias),
 					zap.String("smsc_name", def.Name),
 				)
 			}

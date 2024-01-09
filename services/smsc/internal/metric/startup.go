@@ -18,6 +18,9 @@ import (
 )
 
 func Configure(ctx context.Context, cfg config.Configuration) {
+	if cfg.OpenTelemetry == nil {
+		return
+	}
 	if provider := getTracerProviderFrom(ctx, cfg.OpenTelemetry); provider != nil {
 		otel.SetTracerProvider(provider)
 	}
@@ -26,7 +29,7 @@ func Configure(ctx context.Context, cfg config.Configuration) {
 	}
 }
 
-func getMeterProviderFrom(ctx context.Context, cfg config.OpenTelemetry) *metric.MeterProvider {
+func getMeterProviderFrom(ctx context.Context, cfg *config.OpenTelemetry) *metric.MeterProvider {
 	r, err := resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
@@ -68,7 +71,7 @@ func getMeterProviderFrom(ctx context.Context, cfg config.OpenTelemetry) *metric
 	)
 }
 
-func getMetricExporterFrom(ctx context.Context, cfg config.OpenTelemetry) (metric.Exporter, error) {
+func getMetricExporterFrom(ctx context.Context, cfg *config.OpenTelemetry) (metric.Exporter, error) {
 	switch cfg.Metrics.ExportMethod {
 	case "":
 		return nil, nil
@@ -88,7 +91,7 @@ func getMetricExporterFrom(ctx context.Context, cfg config.OpenTelemetry) (metri
 	}
 }
 
-func getTracerProviderFrom(ctx context.Context, cfg config.OpenTelemetry) *trace.TracerProvider {
+func getTracerProviderFrom(ctx context.Context, cfg *config.OpenTelemetry) *trace.TracerProvider {
 	r, err := resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
@@ -131,7 +134,7 @@ func getTracerProviderFrom(ctx context.Context, cfg config.OpenTelemetry) *trace
 	)
 }
 
-func getTracerExporterFrom(ctx context.Context, cfg config.OpenTelemetry) (trace.SpanExporter, error) {
+func getTracerExporterFrom(ctx context.Context, cfg *config.OpenTelemetry) (trace.SpanExporter, error) {
 	switch cfg.Spans.ExportMethod {
 	case "":
 		return nil, nil

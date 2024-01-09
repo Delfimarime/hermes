@@ -8,6 +8,7 @@ import (
 	"github.com/fiorix/go-smpp/smpp/pdu"
 	"github.com/fiorix/go-smpp/smpp/pdu/pdufield"
 	"github.com/fiorix/go-smpp/smpp/pdu/pdutlv"
+	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
@@ -55,14 +56,14 @@ func NewPduListenerFactory(meter metric.Meter, smsEventListener SmsEventListener
 
 func (instance *PduListenerFactory) New(definition model.Smpp) smpp.HandlerFunc {
 	return func(event pdu.Body) {
-		instance.onPduEvent(definition.Id, definition.Alias, event)
+		instance.onPduEvent(definition, event)
 	}
 }
 
-func (instance *PduListenerFactory) onPduEvent(id, alias string, event pdu.Body) {
+func (instance *PduListenerFactory) onPduEvent(definition model.Smpp, event pdu.Body) {
 	zap.L().Info("Pdu Event received",
-		zap.String("sms_id", id),
-		zap.String("sms_alias", alias),
+		zap.String("sms_id", definition.Id),
+		zap.String("sms_alias", definition.Alias),
 	)
 	attrs := []attribute.KeyValue{
 		{
@@ -75,13 +76,13 @@ func (instance *PduListenerFactory) onPduEvent(id, alias string, event pdu.Body)
 		},
 		{
 			Key:   attribute.Key("alias"),
-			Value: attribute.StringValue(alias),
+			Value: attribute.StringValue(definition.Alias),
 		},
 	}
 	for _, name := range event.FieldList() {
 		zap.L().Debug("Adding Pdu.Field["+string(name)+"] into Pdu Counter metric",
-			zap.String("sms_id", id),
-			zap.String("sms_alias", alias),
+			zap.String("sms_id", definition.Id),
+			zap.String("sms_alias", definition.Alias),
 		)
 		attrs = append(attrs, attribute.KeyValue{
 			Key:   attribute.Key(name),
@@ -89,36 +90,36 @@ func (instance *PduListenerFactory) onPduEvent(id, alias string, event pdu.Body)
 		})
 	}
 	zap.L().Debug("Incrementing Pdu event metric counter",
-		zap.String("sms_id", id),
-		zap.String("sms_alias", alias),
+		zap.String("sms_id", definition.Id),
+		zap.String("sms_alias", definition.Alias),
 	)
 	instance.pduCounterMetric.Add(context.TODO(), 1, metric.WithAttributes(attrs...))
 	zap.L().Debug("Consuming Pdu event",
-		zap.String("sms_id", id),
-		zap.String("sms_alias", alias),
+		zap.String("sms_id", definition.Id),
+		zap.String("sms_alias", definition.Alias),
 	)
-	err := instance.handleEvent(id, alias, event)
+	err := instance.handleEvent(definition, event)
 	if err == nil {
 		zap.L().Debug("Pdu event consumed",
-			zap.String("sms_id", id),
-			zap.String("sms_alias", alias),
+			zap.String("sms_id", definition.Id),
+			zap.String("sms_alias", definition.Alias),
 		)
 		return
 	}
 	zap.L().Error("Failure during Pdu event consumption",
-		zap.String("sms_id", id),
-		zap.String("sms_alias", alias),
+		zap.String("sms_id", definition.Id),
+		zap.String("sms_alias", definition.Alias),
 	)
 }
 
-func (instance *PduListenerFactory) handleEvent(id, alias string, event pdu.Body) error {
+func (instance *PduListenerFactory) handleEvent(definition model.Smpp, event pdu.Body) error {
 	var err error
 	switch event.Header().ID {
 	case pdu.DeliverSMID:
-		err = instance.onDeliverySM(id, alias, event)
+		err = instance.onDeliverySM(definition.Id, definition.Alias, event)
 		break
 	default:
-		return instance.onUnsupportedPduEvent(id, alias, event)
+		return instance.onUnsupportedPduEvent(definition.Id, definition.Alias, event)
 	}
 	if err != nil {
 		return err
@@ -126,15 +127,11 @@ func (instance *PduListenerFactory) handleEvent(id, alias string, event pdu.Body
 	instance.consumedEventCounterMetric.Add(context.TODO(), 1, metric.WithAttributes(
 		attribute.KeyValue{
 			Key:   "sms_id",
-			Value: attribute.StringValue(id),
-		},
-		attribute.KeyValue{
-			Key:   "sms_id",
-			Value: attribute.StringValue(id),
+			Value: attribute.StringValue(definition.Id),
 		},
 		attribute.KeyValue{
 			Key:   "sms_alias",
-			Value: attribute.StringValue(alias),
+			Value: attribute.StringValue(definition.Alias),
 		},
 		attribute.KeyValue{
 			Key:   "operation",
@@ -201,8 +198,9 @@ func (instance *PduListenerFactory) onDeliverySM(id, alias string, event pdu.Bod
 			zap.String("sms_alias", alias),
 		)
 		r := ReceivedSmsRequest{
-			ReceivedAt: receivedAt,
 			SmscId:     id,
+			ReceivedAt: receivedAt,
+			Id:         uuid.New().String(),
 			Message:    fromRequest.content,
 		}
 		if fromRequest.messageId != "" {

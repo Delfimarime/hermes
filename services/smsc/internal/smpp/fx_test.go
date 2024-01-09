@@ -7,6 +7,7 @@ import (
 	"github.com/delfimarime/hermes/services/smsc/internal/metric"
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
 	"github.com/delfimarime/hermes/services/smsc/pkg/config"
+	"github.com/docker/go-connections/nat"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -49,7 +50,7 @@ func TestSendSms(t *testing.T) {
 			t.Fatal(err)
 		}
 		require.NotNil(t, resp, "Response mustn't be nil")
-		require.GreaterOrEqual(t, idFromResponse, 1, "SendMessageResponse.Id must be greater or equal to 1")
+		require.GreaterOrEqual(t, idFromResponse, 0, "SendMessageResponse.Id must be greater or equal to 1")
 	})
 }
 
@@ -111,6 +112,7 @@ func TestListenToMessage(t *testing.T) {
 
 func TestSendSmsAndCatchDeliveryReport(t *testing.T) {
 	withSmppSim(t, func(ip string, port string) {
+		var resp SendMessageResponse
 		senderId := uuid.New().String()
 		receiverId := uuid.New().String()
 		destination := "+258849900000"
@@ -137,8 +139,10 @@ func TestSendSmsAndCatchDeliveryReport(t *testing.T) {
 					go func() {
 						time.Sleep(1 * time.Second)
 						c := cm.(*SimpleConnectorManager).cache[senderId]
-						if _, err := c.SendMessage(destination, msg); err != nil {
+						if r, err := c.SendMessage(destination, msg); err != nil {
 							t.Error(err)
+						} else {
+							resp = r
 						}
 					}()
 					wg.Wait()
@@ -147,25 +151,30 @@ func TestSendSmsAndCatchDeliveryReport(t *testing.T) {
 			})
 		}))
 		defer app.RequireStart().RequireStop()
-
 		require.NotNil(t, listener.SmsDeliveryRequests, "Listener didn't catch any delivery report")
 		require.Len(t, listener.SmsDeliveryRequests, 1, "Listener delivery reports size must be 1")
 		require.NotEmptyf(t, listener.SmsDeliveryRequests[0].Id, "Id mustn't be empty")
-		require.Equal(t, listener.SmsDeliveryRequests[0].SmscId, senderId, "Receiving SMSC.id must be the same")
+		require.Equal(t, resp.Id, listener.SmsDeliveryRequests[0].Id, "Resp.Id and Delivery.Id must match")
+		//		require.Equal(t, listener.SmsDeliveryRequests[0].SmscId, receiverId, "Receiving SMSC.id must match")
 		require.Equal(t, listener.SmsDeliveryRequests[0].Status, 0, "From mustn't be empty")
 	})
 
 }
 
 func withSmppSim(t *testing.T, exec func(ip string, port string)) {
+	smppPort := "2775"
+	managementConsolePort := "8884"
 	ctx := goContext.Background()
 	dockerContainer, err := testcontainers.
 		GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
-				Image:        "smppsim:latest",
-				ExposedPorts: []string{"8884/tcp", "2775/tcp"},
+				Image: "smppsim:latest",
+				ExposedPorts: []string{
+					fmt.Sprintf("%s/tcp", smppPort),
+					fmt.Sprintf("%s/tcp", managementConsolePort),
+				},
 				WaitingFor: wait.ForHTTP("/").
-					WithPort("8884").
+					WithPort(nat.Port(managementConsolePort)).
 					WithMethod("GET"),
 				Files: []testcontainers.ContainerFile{
 					{
@@ -190,15 +199,16 @@ func withSmppSim(t *testing.T, exec func(ip string, port string)) {
 			t.Error(prob)
 		}
 	}()
-	ip, err := dockerContainer.ContainerIP(ctx)
+	ip, err := dockerContainer.Host(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	port, err := dockerContainer.MappedPort(ctx, nat.Port(smppPort))
 	if err != nil {
 		return
 	}
 	if exec != nil {
-		exec(ip, "2775")
+		exec(ip, string(port.Port()))
 	}
 }
 

@@ -116,10 +116,10 @@ func (instance *PduListenerFactory) handleEvent(definition model.Smpp, event pdu
 	var err error
 	switch event.Header().ID {
 	case pdu.DeliverSMID:
-		err = instance.onDeliverySM(definition.Id, definition.Alias, event)
+		err = instance.onDeliverySM(definition, event)
 		break
 	default:
-		return instance.onUnsupportedPduEvent(definition.Id, definition.Alias, event)
+		return instance.onUnsupportedPduEvent(definition, event)
 	}
 	if err != nil {
 		return err
@@ -145,19 +145,15 @@ func (instance *PduListenerFactory) handleEvent(definition model.Smpp, event pdu
 	return nil
 }
 
-func (instance *PduListenerFactory) onUnsupportedPduEvent(id, alias string, event pdu.Body) error {
+func (instance *PduListenerFactory) onUnsupportedPduEvent(definition model.Smpp, event pdu.Body) error {
 	instance.unsupportedEventCounterMetric.Add(context.TODO(), 1, metric.WithAttributes(
 		attribute.KeyValue{
 			Key:   "sms_id",
-			Value: attribute.StringValue(id),
-		},
-		attribute.KeyValue{
-			Key:   "sms_id",
-			Value: attribute.StringValue(id),
+			Value: attribute.StringValue(definition.Alias),
 		},
 		attribute.KeyValue{
 			Key:   "sms_alias",
-			Value: attribute.StringValue(alias),
+			Value: attribute.StringValue(definition.Alias),
 		},
 		attribute.KeyValue{
 			Key:   "operation",
@@ -169,36 +165,36 @@ func (instance *PduListenerFactory) onUnsupportedPduEvent(id, alias string, even
 		},
 	))
 	zap.L().Warn("Cannot consume Pdu event",
-		zap.String("sms_id", id),
-		zap.String("sms_alias", alias),
+		zap.String("sms_id", definition.Id),
+		zap.String("sms_alias", definition.Alias),
 		zap.String("operation", event.Header().ID.String()),
 		zap.Float64("status", float64(event.Header().Status)),
 	)
 	return nil
 }
 
-func (instance *PduListenerFactory) onDeliverySM(id, alias string, event pdu.Body) error {
+func (instance *PduListenerFactory) onDeliverySM(definition model.Smpp, event pdu.Body) error {
 	receivedAt := time.Now()
 	esmClass := event.Fields()[pdufield.ESMClass].Raw().(uint8)
 	switch esmClass {
 	case 0x00:
 		zap.L().Info("Pdu event identified recognized as SmsRequest",
-			zap.String("sms_id", id),
-			zap.String("sms_alias", alias),
+			zap.String("sms_id", definition.Id),
+			zap.String("sms_alias", definition.Alias),
 			zap.String("esm_class", "0x00"),
 			zap.String("operation", event.Header().ID.String()),
 		)
 		zap.L().Debug("Converting PduEvent into PduObject",
-			zap.String("sms_id", id),
-			zap.String("sms_alias", alias),
+			zap.String("sms_id", definition.Id),
+			zap.String("sms_alias", definition.Alias),
 		)
 		fromRequest := getPduObject(event)
 		zap.L().Debug("Converting PduObject into ReceivedSmsRequest",
-			zap.String("sms_id", id),
-			zap.String("sms_alias", alias),
+			zap.String("sms_id", definition.Id),
+			zap.String("sms_alias", definition.Alias),
 		)
 		r := ReceivedSmsRequest{
-			SmscId:     id,
+			SmscId:     definition.Id,
 			ReceivedAt: receivedAt,
 			Id:         uuid.New().String(),
 			Message:    fromRequest.content,
@@ -210,31 +206,31 @@ func (instance *PduListenerFactory) onDeliverySM(id, alias string, event pdu.Bod
 			r.From = fromRequest.sourceAddr
 		}
 		zap.L().Debug("Submit ReceivedSmsRequest into listener",
-			zap.String("sms_id", id),
-			zap.String("sms_alias", alias),
+			zap.String("sms_id", definition.Id),
+			zap.String("sms_alias", definition.Alias),
 		)
 		instance.smsEventListener.OnSmsRequest(r)
 		break
 	case 0x04:
 		zap.L().Info("Pdu event identified recognized as SmsDeliveryRequest",
-			zap.String("sms_id", id),
-			zap.String("sms_alias", alias),
+			zap.String("sms_id", definition.Id),
+			zap.String("sms_alias", definition.Alias),
 			zap.String("esm_class", "0x04"),
 			zap.String("operation", event.Header().ID.String()),
 		)
 		zap.L().Debug("PduEvent converted into SmsDeliveryRequest",
-			zap.String("sms_id", id),
-			zap.String("sms_alias", alias),
+			zap.String("sms_id", definition.Id),
+			zap.String("sms_alias", definition.Alias),
 		)
 		r := SmsDeliveryRequest{
-			SmscId:     id,
 			ReceivedAt: receivedAt,
+			SmscId:     definition.Id,
 			Status:     int(event.Header().Status),
 			Id:         event.TLVFields()[pdutlv.TagReceiptedMessageID].String(),
 		}
 		zap.L().Debug("Submit SmsDeliveryRequest into listener",
-			zap.String("sms_id", id),
-			zap.String("sms_alias", alias),
+			zap.String("sms_id", definition.Id),
+			zap.String("sms_alias", definition.Alias),
 		)
 		instance.smsEventListener.OnSmsDelivered(r)
 		break

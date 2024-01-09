@@ -1,0 +1,11 @@
+version: '3'
+services:
+  smppsim:
+    container_name: smpp
+    image: smppsim:latest
+    volumes:
+      - ./smppsim.props:/app/conf/smppsim.props
+      - ./logging.properties:/app/conf/logging.properties
+    expose:
+      - 8884
+      - 2775

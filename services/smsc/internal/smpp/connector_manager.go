@@ -20,7 +20,7 @@ type SimpleConnectorManager struct {
 	pduListenerFactory *PduListenerFactory
 	configuration      config.Configuration
 	connectorList      []Connector
-	connectorMap       map[string]*AdapterConnector
+	connectorMap       map[string]*SimpleConnector
 }
 
 func (instance *SimpleConnectorManager) GetList() []Connector {
@@ -57,7 +57,7 @@ func (instance *SimpleConnectorManager) Close() error {
 		if err := each.doClose(); err != nil {
 			if err != nil {
 				zap.L().Error("Cannot close smsc[id="+v.GetId()+"]",
-					zap.String("smsc_id", v.GetId()),
+					zap.String(smscIdAttribute, v.GetId()),
 					zap.Error(err),
 				)
 			}
@@ -74,8 +74,8 @@ func (instance *SimpleConnectorManager) setConnectors(ctx context.Context, seq .
 		connector, prob := instance.newConnector(definition)
 		if prob != nil {
 			zap.L().Warn("Cannot initialize smsc[id="+definition.Id+"]",
-				zap.String("smsc_id", definition.Id),
-				zap.String("smsc_name", definition.Name),
+				zap.String(smscIdAttribute, definition.Id),
+				zap.String(smscNameAttribute, definition.Name),
 				zap.Error(prob),
 			)
 		}
@@ -101,9 +101,9 @@ func (instance *SimpleConnectorManager) doBindConnector(ctx context.Context, wg 
 	arr, err := instance.metricsFrom(otel.Meter("hermes_smsc"), def, namesOfMetrics)
 	if err != nil {
 		zap.L().Error("Cannot create metrics for smsc[id="+connector.GetId()+"]",
-			zap.String("smsc_id", def.Id),
-			zap.String("smsc_alias", def.Alias),
-			zap.String("smsc_name", def.Name),
+			zap.String(smscIdAttribute, def.Id),
+			zap.String(smscAliasAttribute, def.Alias),
+			zap.String(smscNameAttribute, def.Name),
 			zap.Error(err),
 		)
 		status = ErrorConnectorLifecycleState
@@ -113,38 +113,39 @@ func (instance *SimpleConnectorManager) doBindConnector(ctx context.Context, wg 
 		select {
 		case <-ctx.Done():
 			zap.L().Warn("Cannot bind smsc[id="+def.Id+"]",
-				zap.String("smsc_id", def.Id),
-				zap.String("smsc_alias", def.Alias),
-				zap.String("smsc_name", def.Name),
+				zap.String(smscIdAttribute, def.Id),
+				zap.String(smscAliasAttribute, def.Alias),
+				zap.String(smscNameAttribute, def.Name),
 				zap.Int64("duration", instance.configuration.Smsc.StartupTimeout),
 			)
 			status = ErrorConnectorLifecycleState
 		case prob := <-instance.bindConnector(connector):
 			if prob != nil {
 				zap.L().Error("Cannot bind smsc[id="+connector.GetId()+"]",
-					zap.String("smsc_id", def.Id),
-					zap.String("smsc_alias", def.Alias),
-					zap.String("smsc_name", def.Name),
+					zap.String(smscIdAttribute, def.Id),
+					zap.String(smscAliasAttribute, def.Alias),
+					zap.String(smscNameAttribute, def.Name),
 					zap.Error(prob),
 				)
 			} else {
 				zap.L().Info("Bind smsc[id="+connector.GetId()+"]",
-					zap.String("smsc_id", def.Id),
-					zap.String("smsc_alias", def.Alias),
-					zap.String("smsc_name", def.Name),
+					zap.String(smscIdAttribute, def.Id),
+					zap.String(smscAliasAttribute, def.Alias),
+					zap.String(smscNameAttribute, def.Name),
 				)
 			}
 		}
 	}
-	m := AdapterConnector{
+	m := SimpleConnector{
 		state:                       status,
+		alias:                       def.Alias,
 		connector:                   connector,
-		SendMessageCountMetric:      metrics[0],
-		SendMessageErrorCountMetric: metrics[1],
-		RefreshCountMetric:          metrics[2],
-		RefreshErrorCountMetric:     metrics[3],
-		BindCountMetric:             metrics[4],
-		BindErrorCountMetric:        metrics[5],
+		sendMessageCountMetric:      metrics[0],
+		sendMessageErrorCountMetric: metrics[1],
+		refreshCountMetric:          metrics[2],
+		refreshErrorCountMetric:     metrics[3],
+		bindCountMetric:             metrics[4],
+		bindErrorCountMetric:        metrics[5],
 	}
 	instance.connectorMap[def.Id] = &m
 	instance.connectorList = append(instance.connectorList, &m)

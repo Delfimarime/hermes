@@ -62,53 +62,42 @@ func (instance *PduListenerFactory) New(definition model.Smpp) smpp.HandlerFunc 
 
 func (instance *PduListenerFactory) onPduEvent(definition model.Smpp, event pdu.Body) {
 	zap.L().Info("Pdu Event received",
-		zap.String("sms_id", definition.Id),
-		zap.String("sms_alias", definition.Alias),
+		zap.String(smscIdAttribute, definition.Id),
+		zap.String(smscAliasAttribute, definition.Alias),
 	)
 	attrs := []attribute.KeyValue{
-		{
-			Key:   attribute.Key("type"),
-			Value: attribute.StringValue(event.Header().ID.String()),
-		},
-		{
-			Key:   attribute.Key("status"),
-			Value: attribute.Float64Value(float64(event.Header().Status)),
-		},
-		{
-			Key:   attribute.Key("alias"),
-			Value: attribute.StringValue(definition.Alias),
-		},
+		attribute.String(pduHeaderIdAttribute, event.Header().ID.String()),
+		attribute.Float64(pduHeaderStatusAttribute, float64(event.Header().Status)),
+		attribute.String(smscAliasAttribute, definition.Alias),
 	}
 	for _, name := range event.FieldList() {
 		zap.L().Debug("Adding Pdu.Field["+string(name)+"] into Pdu Counter metric",
-			zap.String("sms_id", definition.Id),
-			zap.String("sms_alias", definition.Alias),
+			zap.String(smscIdAttribute, definition.Id),
+			zap.String(smscAliasAttribute, definition.Alias),
 		)
-		attrs = append(attrs, attribute.KeyValue{
-			Key:   attribute.Key(name),
-			Value: attribute.StringValue(event.Header().ID.String()),
-		})
+		attrs = append(attrs, attribute.String(fmt.
+			Sprintf("%s_%s", pduFieldAttribute, name), event.Fields()[name].String()))
 	}
 	zap.L().Debug("Incrementing Pdu event metric counter",
-		zap.String("sms_id", definition.Id),
-		zap.String("sms_alias", definition.Alias),
+		zap.String(smscIdAttribute, definition.Id),
+		zap.String(smscAliasAttribute, definition.Alias),
 	)
 	instance.pduCounterMetric.Add(context.TODO(), 1, metric.WithAttributes(attrs...))
 	zap.L().Debug("Consuming Pdu event",
-		zap.String("sms_id", definition.Id),
-		zap.String("sms_alias", definition.Alias),
+		zap.String(smscIdAttribute, definition.Id),
+		zap.String(smscAliasAttribute, definition.Alias),
 	)
 	err := instance.handleEvent(definition, event)
 	if err == nil {
 		zap.L().Debug("Pdu event consumed",
-			zap.String("sms_id", definition.Id),
-			zap.String("sms_alias", definition.Alias),
+			zap.String(smscIdAttribute, definition.Id),
+			zap.String(smscAliasAttribute, definition.Alias),
 		)
 		return
 	}
 	zap.L().Error("Failure during Pdu event consumption",
-		zap.String("sms_id", definition.Id),
-		zap.String("sms_alias", definition.Alias),
+		zap.String(smscIdAttribute, definition.Id),
+		zap.String(smscAliasAttribute, definition.Alias),
 	)
 }
 
@@ -125,50 +114,26 @@ func (instance *PduListenerFactory) handleEvent(definition model.Smpp, event pdu
 		return err
 	}
 	instance.consumedEventCounterMetric.Add(context.TODO(), 1, metric.WithAttributes(
-		attribute.KeyValue{
-			Key:   "sms_id",
-			Value: attribute.StringValue(definition.Id),
-		},
-		attribute.KeyValue{
-			Key:   "sms_alias",
-			Value: attribute.StringValue(definition.Alias),
-		},
-		attribute.KeyValue{
-			Key:   "operation",
-			Value: attribute.StringValue(event.Header().ID.String()),
-		},
-		attribute.KeyValue{
-			Key:   "status",
-			Value: attribute.Float64Value(float64(event.Header().Status)),
-		},
+		attribute.String(smscIdAttribute, definition.Id),
+		attribute.String(smscAliasAttribute, definition.Alias),
+		attribute.String(pduHeaderIdAttribute, event.Header().ID.String()),
+		attribute.Float64(pduHeaderStatusAttribute, float64(event.Header().Status)),
 	))
 	return nil
 }
 
 func (instance *PduListenerFactory) onUnsupportedPduEvent(definition model.Smpp, event pdu.Body) error {
 	instance.unsupportedEventCounterMetric.Add(context.TODO(), 1, metric.WithAttributes(
-		attribute.KeyValue{
-			Key:   "sms_id",
-			Value: attribute.StringValue(definition.Alias),
-		},
-		attribute.KeyValue{
-			Key:   "sms_alias",
-			Value: attribute.StringValue(definition.Alias),
-		},
-		attribute.KeyValue{
-			Key:   "operation",
-			Value: attribute.StringValue(event.Header().ID.String()),
-		},
-		attribute.KeyValue{
-			Key:   "status",
-			Value: attribute.Float64Value(float64(event.Header().Status)),
-		},
+		attribute.String(smscIdAttribute, definition.Id),
+		attribute.String(smscAliasAttribute, definition.Alias),
+		attribute.String(pduHeaderIdAttribute, event.Header().ID.String()),
+		attribute.Float64(pduHeaderStatusAttribute, float64(event.Header().Status)),
 	))
 	zap.L().Warn("Cannot consume Pdu event",
-		zap.String("sms_id", definition.Id),
-		zap.String("sms_alias", definition.Alias),
-		zap.String("operation", event.Header().ID.String()),
-		zap.Float64("status", float64(event.Header().Status)),
+		zap.String(smscIdAttribute, definition.Id),
+		zap.String(smscAliasAttribute, definition.Alias),
+		zap.String(pduHeaderIdAttribute, event.Header().ID.String()),
+		zap.Float64(pduHeaderStatusAttribute, float64(event.Header().Status)),
 	)
 	return nil
 }
@@ -179,19 +144,19 @@ func (instance *PduListenerFactory) onDeliverySM(definition model.Smpp, event pd
 	switch esmClass {
 	case 0x00:
 		zap.L().Info("Pdu event identified recognized as SmsRequest",
-			zap.String("sms_id", definition.Id),
-			zap.String("sms_alias", definition.Alias),
-			zap.String("esm_class", "0x00"),
-			zap.String("operation", event.Header().ID.String()),
+			zap.String(smscIdAttribute, definition.Id),
+			zap.String(smscAliasAttribute, definition.Alias),
+			zap.String(pduFieldEsmClassAttribute, "0x00"),
+			zap.String(pduHeaderIdAttribute, event.Header().ID.String()),
 		)
 		zap.L().Debug("Converting PduEvent into PduObject",
-			zap.String("sms_id", definition.Id),
-			zap.String("sms_alias", definition.Alias),
+			zap.String(smscIdAttribute, definition.Id),
+			zap.String(smscAliasAttribute, definition.Alias),
 		)
 		fromRequest := getPduObject(event)
 		zap.L().Debug("Converting PduObject into ReceivedSmsRequest",
-			zap.String("sms_id", definition.Id),
-			zap.String("sms_alias", definition.Alias),
+			zap.String(smscIdAttribute, definition.Id),
+			zap.String(smscAliasAttribute, definition.Alias),
 		)
 		r := ReceivedSmsRequest{
 			SmscId:     definition.Id,
@@ -206,21 +171,21 @@ func (instance *PduListenerFactory) onDeliverySM(definition model.Smpp, event pd
 			r.From = fromRequest.sourceAddr
 		}
 		zap.L().Debug("Submit ReceivedSmsRequest into listener",
-			zap.String("sms_id", definition.Id),
-			zap.String("sms_alias", definition.Alias),
+			zap.String(smscIdAttribute, definition.Id),
+			zap.String(smscAliasAttribute, definition.Alias),
 		)
 		instance.smsEventListener.OnSmsRequest(r)
 		break
 	case 0x04:
 		zap.L().Info("Pdu event identified recognized as SmsDeliveryRequest",
-			zap.String("sms_id", definition.Id),
-			zap.String("sms_alias", definition.Alias),
-			zap.String("esm_class", "0x04"),
-			zap.String("operation", event.Header().ID.String()),
+			zap.String(smscIdAttribute, definition.Id),
+			zap.String(smscAliasAttribute, definition.Alias),
+			zap.String(pduFieldEsmClassAttribute, "0x04"),
+			zap.String(pduHeaderIdAttribute, event.Header().ID.String()),
 		)
 		zap.L().Debug("PduEvent converted into SmsDeliveryRequest",
-			zap.String("sms_id", definition.Id),
-			zap.String("sms_alias", definition.Alias),
+			zap.String(smscIdAttribute, definition.Id),
+			zap.String(smscAliasAttribute, definition.Alias),
 		)
 		r := SmsDeliveryRequest{
 			ReceivedAt: receivedAt,
@@ -229,8 +194,8 @@ func (instance *PduListenerFactory) onDeliverySM(definition model.Smpp, event pd
 			Id:         event.TLVFields()[pdutlv.TagReceiptedMessageID].String(),
 		}
 		zap.L().Debug("Submit SmsDeliveryRequest into listener",
-			zap.String("sms_id", definition.Id),
-			zap.String("sms_alias", definition.Alias),
+			zap.String(smscIdAttribute, definition.Id),
+			zap.String(smscAliasAttribute, definition.Alias),
 		)
 		instance.smsEventListener.OnSmsDelivered(r)
 		break

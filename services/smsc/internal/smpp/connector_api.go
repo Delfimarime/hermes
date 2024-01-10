@@ -27,6 +27,7 @@ type Connector interface {
 	GetId() string
 	GetType() string
 	GetState() string
+	GetAlias() string
 	SendMessage(destination, message string) (SendMessageResponse, error)
 }
 

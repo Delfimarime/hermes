@@ -28,7 +28,7 @@ func GetUberFxModule() fx.Option {
 					pduListenerFactory: pduListenerFactory,
 					connectorList:      make([]Connector, 0),
 					configuration:      ctx.GetConfiguration(),
-					connectorMap:       make(map[string]*AdapterConnector),
+					connectorMap:       make(map[string]*SimpleConnector),
 				}
 			},
 		),

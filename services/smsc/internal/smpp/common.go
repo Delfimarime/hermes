@@ -4,6 +4,7 @@ const (
 	smscIdAttribute           = "smsc_id"
 	smscNameAttribute         = "smsc_name"
 	smscAliasAttribute        = "smsc_alias"
+	smscStateAttribute        = "smsc_state"
 	errorAttribute            = "caused-by"
 	pduAttribute              = "pdu"
 	pduFieldAttribute         = pduAttribute + "_field"

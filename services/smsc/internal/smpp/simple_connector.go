@@ -38,9 +38,7 @@ func (instance *SimpleConnector) GetAlias() string {
 
 func (instance *SimpleConnector) SendMessage(destination, message string) (SendMessageResponse, error) {
 	resp, err := instance.connector.(Client).SendMessage(destination, message)
-	defer func() {
-		instance.increaseMetricCounter(instance.sendMessageCountMetric, instance.sendMessageErrorCountMetric, err)
-	}()
+	instance.increaseMetricCounter(instance.sendMessageCountMetric, instance.sendMessageErrorCountMetric, err)
 	return resp, err
 }
 
@@ -48,9 +46,7 @@ func (instance *SimpleConnector) doBind() error {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
 	err := instance.connector.Bind()
-	defer func() {
-		instance.increaseMetricCounter(instance.bindCountMetric, instance.bindErrorCountMetric, err)
-	}()
+	instance.increaseMetricCounter(instance.bindCountMetric, instance.bindErrorCountMetric, err)
 	return err
 }
 
@@ -64,9 +60,7 @@ func (instance *SimpleConnector) doRefresh() error {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
 	err := instance.connector.Refresh()
-	defer func() {
-		instance.increaseMetricCounter(instance.refreshCountMetric, instance.refreshErrorCountMetric, err)
-	}()
+	instance.increaseMetricCounter(instance.refreshCountMetric, instance.refreshErrorCountMetric, err)
 	return err
 }
 

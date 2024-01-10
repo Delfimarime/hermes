@@ -18,7 +18,7 @@ func GetUberFxModule() fx.Option {
 			},
 			func(
 				ctx context.Context,
-				repository SmppRepository,
+				repository Repository,
 				connectorFactory ConnectorFactory,
 				pduListenerFactory *PduListenerFactory,
 			) ConnectorManager {

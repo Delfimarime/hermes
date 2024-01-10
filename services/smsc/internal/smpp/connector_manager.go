@@ -15,7 +15,7 @@ import (
 
 type SimpleConnectorManager struct {
 	mutex              sync.Mutex
-	repository         SmppRepository
+	repository         Repository
 	connectorFactory   ConnectorFactory
 	pduListenerFactory *PduListenerFactory
 	configuration      config.Configuration

@@ -75,8 +75,12 @@ func (instance *PduListenerFactory) onPduEvent(definition model.Smpp, event pdu.
 			zap.String(smscIdAttribute, definition.Id),
 			zap.String(smscAliasAttribute, definition.Alias),
 		)
+		f := event.Fields()[name]
+		if f == nil {
+			continue
+		}
 		attrs = append(attrs, attribute.String(fmt.
-			Sprintf("%s_%s", pduFieldAttribute, name), event.Fields()[name].String()))
+			Sprintf("%s_%s", pduFieldAttribute, name), f.String()))
 	}
 	zap.L().Debug("Incrementing Pdu event metric counter",
 		zap.String(smscIdAttribute, definition.Id),

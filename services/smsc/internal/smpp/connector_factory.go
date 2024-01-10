@@ -12,13 +12,13 @@ type SimpleConnectorFactory struct {
 }
 
 func (instance *SimpleConnectorFactory) NewListenerConnector(
-	config model.Smpp, f smpp.HandlerFunc) Connector {
+	config model.Smpp, f smpp.HandlerFunc) Client {
 	target := instance.newNoOpConnector(config, model.ReceiverType, f)
 	return &target
 }
 
 func (instance *SimpleConnectorFactory) NewTransmitterConnector(
-	config model.Smpp, f smpp.HandlerFunc) Connector {
+	config model.Smpp, f smpp.HandlerFunc) Client {
 	awaitDeliveryReport := f != nil
 	if config.Settings.Delivery != nil {
 		awaitDeliveryReport = config.Settings.Delivery.AwaitReport
@@ -27,20 +27,20 @@ func (instance *SimpleConnectorFactory) NewTransmitterConnector(
 	if f != nil {
 		definitionType = model.TransceiverType
 	}
-	return &TransmitterClientConnector{
-		awaitDeliveryReport: awaitDeliveryReport,
-		NoOpConnector:       instance.newNoOpConnector(config, definitionType, f),
-	}
+	client := instance.newNoOpConnector(config, definitionType, f)
+	client.awaitDeliveryReport = awaitDeliveryReport
+	return &client
 }
 
 func (instance *SimpleConnectorFactory) newNoOpConnector(
-	config model.Smpp, definitionType string, f smpp.HandlerFunc) NoOpConnector {
-	return NoOpConnector{
+	config model.Smpp, definitionType string, f smpp.HandlerFunc) SimpleClient {
+	return SimpleClient{
+		smppType:   definitionType,
 		smppClient: instance.newSmppClientFrom(config.Settings, definitionType, f),
 	}
 }
 
-func (instance *SimpleConnectorFactory) newSmppClientFrom(config model.Settings, definitionType string, f smpp.HandlerFunc) Client {
+func (instance *SimpleConnectorFactory) newSmppClientFrom(config model.Settings, definitionType string, f smpp.HandlerFunc) smpp.ClientConn {
 	switch definitionType {
 	case model.ReceiverType, model.TransceiverType:
 		var sample any
@@ -57,12 +57,12 @@ func (instance *SimpleConnectorFactory) newSmppClientFrom(config model.Settings,
 	}
 }
 
-func (instance *SimpleConnectorFactory) withHandlerFunction(client Client, f smpp.HandlerFunc) Client {
+func (instance *SimpleConnectorFactory) withHandlerFunction(client smpp.ClientConn, f smpp.HandlerFunc) smpp.ClientConn {
 	reflect.ValueOf(client).Elem().FieldByName("Handler").Set(reflect.ValueOf(f))
 	return client
 }
 
-func (instance *SimpleConnectorFactory) newSmppClient(config model.Settings, dType reflect.Type) Client {
+func (instance *SimpleConnectorFactory) newSmppClient(config model.Settings, dType reflect.Type) smpp.ClientConn {
 	var bindInterval *time.Duration
 	var enquireLink *time.Duration
 	var responseTimeout *time.Duration
@@ -109,5 +109,5 @@ func (instance *SimpleConnectorFactory) newSmppClient(config model.Settings, dTy
 				Set(reflect.ValueOf(common.MillisToDuration(config.Merge.CleanupInterval)))
 		}
 	}
-	return smppObject.Interface().(Client)
+	return smppObject.Interface().(smpp.ClientConn)
 }

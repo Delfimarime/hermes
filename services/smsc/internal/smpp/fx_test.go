@@ -33,7 +33,7 @@ func TestSendSms(t *testing.T) {
 				fx.Hook{
 					OnStart: func(ctx goContext.Context) error {
 						time.Sleep(2 * time.Second)
-						c := cm.(*SimpleConnectorManager).cache[senderId]
+						c := cm.(*SimpleConnectorManager).connectorMap[senderId]
 						r, err := c.SendMessage("+258849900000", "Hi")
 						if err != nil {
 							return err
@@ -80,7 +80,7 @@ func TestListenToMessage(t *testing.T) {
 							time.Sleep(1 * time.Second)
 							wg.Add(1)
 							go func() {
-								c := cm.(*SimpleConnectorManager).cache[senderId]
+								c := cm.(*SimpleConnectorManager).connectorMap[senderId]
 								if _, err := c.SendMessage(destination, msg); err != nil {
 									t.Error(err)
 								}
@@ -138,7 +138,7 @@ func TestSendSmsAndCatchDeliveryReport(t *testing.T) {
 					wg.Add(1)
 					go func() {
 						time.Sleep(1 * time.Second)
-						c := cm.(*SimpleConnectorManager).cache[senderId]
+						c := cm.(*SimpleConnectorManager).connectorMap[senderId]
 						if r, err := c.SendMessage(destination, msg); err != nil {
 							t.Error(err)
 						} else {

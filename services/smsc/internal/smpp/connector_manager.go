@@ -19,7 +19,17 @@ type SimpleConnectorManager struct {
 	connectorFactory   ConnectorFactory
 	pduListenerFactory *PduListenerFactory
 	configuration      config.Configuration
-	cache              map[string]ManagedConnector
+	connectorList      []Connector
+	connectorMap       map[string]*AdapterConnector
+}
+
+func (instance *SimpleConnectorManager) GetList() []Connector {
+	return instance.connectorList
+}
+
+func (instance *SimpleConnectorManager) GetById(id string) Connector {
+	c, _ := instance.connectorMap[id]
+	return c
 }
 
 func (instance *SimpleConnectorManager) AfterPropertiesSet() error {
@@ -39,12 +49,12 @@ func (instance *SimpleConnectorManager) AfterPropertiesSet() error {
 func (instance *SimpleConnectorManager) Close() error {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
-	if instance.cache == nil {
+	if instance.connectorMap == nil {
 		return nil
 	}
-	for _, v := range instance.cache {
+	for _, v := range instance.connectorMap {
 		each := v
-		if err := each.Close(); err != nil {
+		if err := each.doClose(); err != nil {
 			if err != nil {
 				zap.L().Error("Cannot close smsc[id="+v.GetId()+"]",
 					zap.String("smsc_id", v.GetId()),
@@ -53,20 +63,9 @@ func (instance *SimpleConnectorManager) Close() error {
 			}
 		}
 	}
-	instance.cache = nil
+	instance.connectorMap = nil
+	instance.connectorList = nil
 	return nil
-}
-
-func (instance *SimpleConnectorManager) StateOf(id string) string {
-	if fromCache, hasValue := instance.cache[id]; hasValue {
-		return fromCache.state
-	}
-	return ""
-}
-
-func (instance *SimpleConnectorManager) Refresh(_ string) error {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (instance *SimpleConnectorManager) setConnectors(ctx context.Context, seq ...model.Smpp) {
@@ -87,7 +86,7 @@ func (instance *SimpleConnectorManager) setConnectors(ctx context.Context, seq .
 }
 
 func (instance *SimpleConnectorManager) doBindConnector(ctx context.Context, wg *sync.WaitGroup,
-	connector Connector, def model.Smpp) {
+	connector Client, def model.Smpp) {
 	defer wg.Done()
 	status := StartupConnectorLifecycleState
 	namesOfMetrics := []string{
@@ -137,7 +136,7 @@ func (instance *SimpleConnectorManager) doBindConnector(ctx context.Context, wg 
 			}
 		}
 	}
-	m := ManagedConnector{
+	m := AdapterConnector{
 		state:                       status,
 		connector:                   connector,
 		SendMessageCountMetric:      metrics[0],
@@ -146,9 +145,9 @@ func (instance *SimpleConnectorManager) doBindConnector(ctx context.Context, wg 
 		RefreshErrorCountMetric:     metrics[3],
 		BindCountMetric:             metrics[4],
 		BindErrorCountMetric:        metrics[5],
-		canSendSms:                  def.Type == model.TransmitterType || def.Type == model.TransceiverType,
 	}
-	instance.cache[def.Id] = m
+	instance.connectorMap[def.Id] = &m
+	instance.connectorList = append(instance.connectorList, &m)
 	m.state = ReadyConnectorLifecycleState
 }
 
@@ -167,9 +166,9 @@ func (instance *SimpleConnectorManager) metricsFrom(meter metric.Meter, definiti
 	return r, nil
 }
 
-func (instance *SimpleConnectorManager) newConnector(definition model.Smpp) (Connector, error) {
+func (instance *SimpleConnectorManager) newConnector(definition model.Smpp) (Client, error) {
 	var f smpp.HandlerFunc
-	var connector Connector
+	var connector Client
 	if definition.Type == model.ReceiverType || definition.Type == model.TransceiverType {
 		f = instance.pduListenerFactory.New(definition)
 	}
@@ -190,7 +189,7 @@ func (instance *SimpleConnectorManager) newConnector(definition model.Smpp) (Con
 	return connector, nil
 }
 
-func (instance *SimpleConnectorManager) bindConnector(connector Connector) <-chan error {
+func (instance *SimpleConnectorManager) bindConnector(connector Client) <-chan error {
 	ch := make(chan error, 1)
 	go func() {
 		err := connector.Bind()

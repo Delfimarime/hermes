@@ -1,10 +1,13 @@
 package smpp
 
+type State string
+
 const (
-	ReadyConnectorLifecycleState  = "READY"
-	ErrorConnectorLifecycleState  = "ERROR"
-	ClosedConnectorLifecycleState = "CLOSED"
-	WaitConnectorLifecycleState   = "WAIT"
+	ReadyConnectorLifecycleState   State = "READY"
+	ErrorConnectorLifecycleState   State = "ERROR"
+	ClosedConnectorLifecycleState  State = "CLOSED"
+	WaitConnectorLifecycleState    State = "WAIT"
+	StartupConnectorLifecycleState State = "STARTUP"
 )
 
 type ConnectorManager interface {
@@ -17,11 +20,22 @@ type ConnectorManager interface {
 type Connector interface {
 	GetId() string
 	GetType() string
-	GetState() string
 	GetAlias() string
+	GetState() State
 	SendMessage(destination, message string) (SendMessageResponse, error)
 }
 
 type SendMessageResponse struct {
 	Id string
+}
+
+type UnavailableConnectorError struct {
+	CausedBy error
+}
+
+func (u UnavailableConnectorError) Error() string {
+	if u.CausedBy != nil {
+		return u.CausedBy.Error()
+	}
+	return "Connector isn't ready"
 }

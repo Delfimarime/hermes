@@ -8,10 +8,10 @@ import (
 )
 
 type SimpleConnector struct {
-	state                       string
 	alias                       string
 	client                      Client
 	mutex                       sync.Mutex
+	state                       State
 	sendMessageCountMetric      metric.Float64Counter // number_of_messages_sent
 	sendMessageErrorCountMetric metric.Float64Counter // number_of_messages_send_that_failed
 	refreshCountMetric          metric.Float64Counter // number_of_refreshes
@@ -20,7 +20,7 @@ type SimpleConnector struct {
 	bindErrorCountMetric        metric.Float64Counter // number_of_bindings_that_failed
 }
 
-func (instance *SimpleConnector) GetState() string {
+func (instance *SimpleConnector) GetState() State {
 	return instance.state
 }
 
@@ -37,12 +37,15 @@ func (instance *SimpleConnector) GetAlias() string {
 }
 
 func (instance *SimpleConnector) SendMessage(destination, message string) (SendMessageResponse, error) {
+	if instance.state != ReadyConnectorLifecycleState {
+		return SendMessageResponse{}, UnavailableConnectorError{}
+	}
 	resp, err := instance.client.(Client).SendMessage(destination, message)
 	instance.increaseMetricCounter(instance.sendMessageCountMetric, instance.sendMessageErrorCountMetric, err)
 	return resp, err
 }
 
-func (instance *SimpleConnector) setState(state string) {
+func (instance *SimpleConnector) setState(state State) {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
 	if instance.state == ClosedConnectorLifecycleState {

@@ -102,7 +102,7 @@ func (instance *SimpleConnectorManager) newClient(definition model.Smpp) (Client
 }
 
 func (instance *SimpleConnectorManager) newConnectorFrom(connector Client, def model.Smpp) *SimpleConnector {
-	status := WaitConnectorLifecycleState
+	state := StartupConnectorLifecycleState
 	namesOfMetrics := []string{
 		"number_of_messages_sent_sms",
 		"number_of_messages_send_sms_attempts",
@@ -120,11 +120,11 @@ func (instance *SimpleConnectorManager) newConnectorFrom(connector Client, def m
 			zap.String(smscNameAttribute, def.Name),
 			zap.Error(err),
 		)
-		status = ErrorConnectorLifecycleState
+		state = ErrorConnectorLifecycleState
 	}
 	metrics = arr
 	return &SimpleConnector{
-		state:                       status,
+		state:                       state,
 		alias:                       def.Alias,
 		client:                      connector,
 		sendMessageCountMetric:      metrics[0],
@@ -163,7 +163,7 @@ func (instance *SimpleConnectorManager) refresh() {
 		zap.L().Info(fmt.Sprintf("Starting smsc[id=%s] client", connector.GetId()),
 			zap.String(smscIdAttribute, connector.GetId()),
 			zap.String(smscAliasAttribute, connector.GetAlias()),
-			zap.String(smscStateAttribute, connector.GetState()),
+			zap.String(smscStateAttribute, string(connector.GetState())),
 		)
 		wg.Add(1)
 		each := connector

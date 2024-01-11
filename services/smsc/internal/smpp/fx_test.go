@@ -13,6 +13,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 	"go.uber.org/fx/fxtest"
 	"go.uber.org/zap"
 	"strconv"
@@ -260,6 +261,9 @@ func NewApp(t *testing.T, cfg TestAppConfig, fxOptions ...fx.Option) *fxtest.App
 	}
 	host := fmt.Sprintf("%s:%s", serverIP, serverPort)
 	options := []fx.Option{
+		fx.WithLogger(func() fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: logger}
+		}),
 		fx.StartTimeout(15 * time.Second),
 		fx.Module("context", fx.Provide(func() context.Context {
 			return &context.AppContext{

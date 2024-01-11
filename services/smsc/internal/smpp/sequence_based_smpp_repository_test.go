@@ -18,3 +18,17 @@ func (s SequenceBasedSmsRepository) FindAll() ([]model.Smpp, error) {
 	}
 	return s.Arr, nil
 }
+
+func (s SequenceBasedSmsRepository) FindById(id string) (model.Smpp, error) {
+	if s.Arr != nil {
+		for _, each := range s.Arr {
+			if each.Id == id {
+				return each, nil
+			}
+		}
+	}
+	return model.Smpp{}, &EntityNotFoundError{
+		Id:   id,
+		Type: "Smpp",
+	}
+}

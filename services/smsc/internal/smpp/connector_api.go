@@ -1,14 +1,10 @@
 package smpp
 
-import (
-	"github.com/delfimarime/hermes/services/smsc/internal/model"
-	"github.com/fiorix/go-smpp/smpp"
-)
-
 const (
-	ReadyConnectorLifecycleState   = "READY"
-	ErrorConnectorLifecycleState   = "ERROR"
-	StartupConnectorLifecycleState = "STARTUP"
+	ReadyConnectorLifecycleState  = "READY"
+	ErrorConnectorLifecycleState  = "ERROR"
+	ClosedConnectorLifecycleState = "CLOSED"
+	WaitConnectorLifecycleState   = "WAIT"
 )
 
 type ConnectorManager interface {
@@ -16,11 +12,6 @@ type ConnectorManager interface {
 	GetList() []Connector
 	AfterPropertiesSet() error
 	GetById(id string) Connector
-}
-
-type ConnectorFactory interface {
-	NewListenerConnector(smpp model.Smpp, f smpp.HandlerFunc) Client
-	NewTransmitterConnector(smpp model.Smpp, f smpp.HandlerFunc) Client
 }
 
 type Connector interface {

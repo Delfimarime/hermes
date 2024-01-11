@@ -13,18 +13,13 @@ func GetUberFxModule() fx.Option {
 			func(smsEventListener SmsEventListener) (*PduListenerFactory, error) {
 				return NewPduListenerFactory(otel.Meter("hermes_smsc_listener"), smsEventListener)
 			},
-			func() ConnectorFactory {
-				return &SimpleConnectorFactory{}
-			},
 			func(
 				ctx context.Context,
 				repository Repository,
-				connectorFactory ConnectorFactory,
 				pduListenerFactory *PduListenerFactory,
 			) ConnectorManager {
 				return &SimpleConnectorManager{
 					repository:         repository,
-					connectorFactory:   connectorFactory,
 					pduListenerFactory: pduListenerFactory,
 					connectors:         make([]Connector, 0),
 					configuration:      ctx.GetConfiguration(),

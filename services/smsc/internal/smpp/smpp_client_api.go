@@ -5,6 +5,16 @@ import (
 	"io"
 )
 
+type ClientEventType string
+
+const (
+	ClientConnBoundEventType       ClientEventType = "BIND"
+	ClientConnErrorEventType       ClientEventType = "ERROR"
+	ClientConnInterruptedEventType ClientEventType = "RECONNECT"
+	ClientConnBindErrorEventType   ClientEventType = "BIND_ERROR"
+	ClientConnDisconnectEventType  ClientEventType = "DISCONNECT"
+)
+
 type TransmitterConn interface {
 	smpp.ClientConn
 	Submit(sm *smpp.ShortMessage) (*smpp.ShortMessage, error)
@@ -12,9 +22,13 @@ type TransmitterConn interface {
 
 type Client interface {
 	io.Closer
-	Bind() error
+	Bind()
 	GetId() string
-	Refresh() error
 	GetType() string
 	SendMessage(destination, message string) (SendMessageResponse, error)
+}
+
+type ClientConnEvent struct {
+	Err  error
+	Type ClientEventType
 }

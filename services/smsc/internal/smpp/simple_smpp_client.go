@@ -8,11 +8,19 @@ import (
 	"github.com/fiorix/go-smpp/smpp/pdu/pdutext"
 )
 
+type ClientConnEventListener func(ClientConnEvent)
+
 type SimpleClient struct {
 	awaitDeliveryReport bool
 	id                  string
 	smppType            string
-	smppClient          smpp.ClientConn
+	smppConn            smpp.ClientConn
+	clientEventListener ClientConnEventListener
+	bindingChannel      <-chan smpp.ConnStatus
+}
+
+func (instance *SimpleClient) Close() error {
+	return instance.smppConn.Close()
 }
 
 func (instance *SimpleClient) GetType() string {
@@ -23,24 +31,14 @@ func (instance *SimpleClient) GetId() string {
 	return instance.id
 }
 
-func (instance *SimpleClient) Bind() error {
-	conn := instance.smppClient.Bind()
-	if status := <-conn; status.Error() != nil {
-		return status.Error()
+func (instance *SimpleClient) Bind() {
+	if instance.bindingChannel != nil {
+		return
 	}
-	return nil
-}
-
-func (instance *SimpleClient) Close() error {
-	if instance.smppClient == nil {
-		return nil
-	}
-	return instance.smppClient.Close()
-}
-
-func (instance *SimpleClient) Refresh() error {
-	//TODO implement me
-	panic("implement me")
+	instance.bindingChannel = instance.smppConn.Bind()
+	go func(ch <-chan smpp.ConnStatus) {
+		instance.observeClientConn(ch)
+	}(instance.bindingChannel)
 }
 
 func (instance *SimpleClient) SendMessage(destination, message string) (SendMessageResponse, error) {
@@ -51,7 +49,7 @@ func (instance *SimpleClient) SendMessage(destination, message string) (SendMess
 	if instance.awaitDeliveryReport {
 		deliverySetting = pdufield.FinalDeliveryReceipt
 	}
-	sm, err := instance.smppClient.(TransmitterConn).Submit(&smpp.ShortMessage{
+	sm, err := instance.smppConn.(TransmitterConn).Submit(&smpp.ShortMessage{
 		Dst:      destination,
 		Register: deliverySetting,
 		Text:     pdutext.Raw(message),
@@ -62,4 +60,40 @@ func (instance *SimpleClient) SendMessage(destination, message string) (SendMess
 	return SendMessageResponse{
 		Id: sm.Resp().Fields()[pdufield.MessageID].String(),
 	}, err
+}
+
+func (instance *SimpleClient) observeClientConn(ch <-chan smpp.ConnStatus) {
+	for status := range ch {
+		var err error
+		var eventType ClientEventType = ""
+		switch status.Status() {
+		case smpp.Connected:
+			eventType = ClientConnBoundEventType
+			break
+		case smpp.Disconnected:
+			eventType = ClientConnDisconnectEventType
+			err = status.Error()
+			break
+		case smpp.BindFailed:
+			err = status.Error()
+			eventType = ClientConnBindErrorEventType
+			break
+		case smpp.ConnectionFailed:
+			err = status.Error()
+			eventType = ClientConnInterruptedEventType
+			break
+		default:
+			if status.Error() != nil {
+				err = status.Error()
+				eventType = ClientConnErrorEventType
+			}
+			break
+		}
+		if instance.clientEventListener != nil && eventType != "" {
+			instance.clientEventListener(ClientConnEvent{
+				Err:  err,
+				Type: eventType,
+			})
+		}
+	}
 }

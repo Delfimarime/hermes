@@ -1,7 +1,6 @@
 package smpp
 
 import (
-	"context"
 	"fmt"
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
 	"github.com/delfimarime/hermes/services/smsc/pkg/config"
@@ -9,16 +8,16 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"sync"
 )
 
 type SimpleConnectorManager struct {
 	mutex              sync.Mutex
 	repository         Repository
-	connectorFactory   ConnectorFactory
+	connectors         []Connector
 	pduListenerFactory *PduListenerFactory
 	configuration      config.Configuration
-	connectors         []Connector
 	connectorCache     map[string]*SimpleConnector
 }
 
@@ -42,9 +41,6 @@ func (instance *SimpleConnectorManager) AfterPropertiesSet() error {
 	go func() {
 		instance.refresh()
 	}()
-	//	ctx, cancel := context.WithTimeout(context.Background(),
-	//		common.MillisToDuration(instance.configuration.Smsc.StartupTimeout))
-	//	defer cancel()
 	return nil
 }
 
@@ -86,8 +82,27 @@ func (instance *SimpleConnectorManager) setConnectors(seq ...model.Smpp) {
 	}
 }
 
+func (instance *SimpleConnectorManager) newClient(definition model.Smpp) (Client, error) {
+	var f smpp.HandlerFunc
+	var connector Client
+	if definition.Type == model.ReceiverType || definition.Type == model.TransceiverType {
+		f = instance.pduListenerFactory.New(definition)
+	}
+	switch definition.Type {
+	case model.ReceiverType:
+		connector = newListenerConnector(definition, instance.onClientConnEvent(definition.Id), f)
+		break
+	case model.TransceiverType, model.TransmitterType:
+		connector = newTransmitterConnector(definition, instance.onClientConnEvent(definition.Id), f)
+		break
+	default:
+		return nil, fmt.Errorf("type=%s isn't supported", definition.Type)
+	}
+	return connector, nil
+}
+
 func (instance *SimpleConnectorManager) newConnectorFrom(connector Client, def model.Smpp) *SimpleConnector {
-	status := StartupConnectorLifecycleState
+	status := WaitConnectorLifecycleState
 	namesOfMetrics := []string{
 		"number_of_messages_sent_sms",
 		"number_of_messages_send_sms_attempts",
@@ -111,7 +126,7 @@ func (instance *SimpleConnectorManager) newConnectorFrom(connector Client, def m
 	return &SimpleConnector{
 		state:                       status,
 		alias:                       def.Alias,
-		connector:                   connector,
+		client:                      connector,
 		sendMessageCountMetric:      metrics[0],
 		sendMessageErrorCountMetric: metrics[1],
 		refreshCountMetric:          metrics[2],
@@ -119,73 +134,6 @@ func (instance *SimpleConnectorManager) newConnectorFrom(connector Client, def m
 		bindCountMetric:             metrics[4],
 		bindErrorCountMetric:        metrics[5],
 	}
-}
-
-func (instance *SimpleConnectorManager) doBindConnector(ctx context.Context, wg *sync.WaitGroup,
-	connector Client, def model.Smpp) {
-	defer wg.Done()
-	status := StartupConnectorLifecycleState
-	namesOfMetrics := []string{
-		"number_of_messages_sent_sms",
-		"number_of_messages_send_sms_attempts",
-		"number_of_refreshes",
-		"number_of_refresh_attempts",
-		"number_of_bindings",
-		"number_of_bindings_attempts",
-	}
-	metrics := make([]metric.Float64Counter, len(namesOfMetrics))
-	arr, err := instance.metricsFrom(otel.Meter("hermes_smsc"), def, namesOfMetrics)
-	if err != nil {
-		zap.L().Error("Cannot create metrics for smsc[id="+connector.GetId()+"]",
-			zap.String(smscIdAttribute, def.Id),
-			zap.String(smscAliasAttribute, def.Alias),
-			zap.String(smscNameAttribute, def.Name),
-			zap.Error(err),
-		)
-		status = ErrorConnectorLifecycleState
-	}
-	metrics = arr
-	if status == StartupConnectorLifecycleState {
-		select {
-		case <-ctx.Done():
-			zap.L().Warn("Cannot bind smsc[id="+def.Id+"]",
-				zap.String(smscIdAttribute, def.Id),
-				zap.String(smscAliasAttribute, def.Alias),
-				zap.String(smscNameAttribute, def.Name),
-				zap.Int64("duration", instance.configuration.Smsc.StartupTimeout),
-			)
-			status = ErrorConnectorLifecycleState
-		case prob := <-instance.bindConnector(connector):
-			if prob != nil {
-				zap.L().Error("Cannot bind smsc[id="+connector.GetId()+"]",
-					zap.String(smscIdAttribute, def.Id),
-					zap.String(smscAliasAttribute, def.Alias),
-					zap.String(smscNameAttribute, def.Name),
-					zap.Error(prob),
-				)
-			} else {
-				zap.L().Info("Bind smsc[id="+connector.GetId()+"]",
-					zap.String(smscIdAttribute, def.Id),
-					zap.String(smscAliasAttribute, def.Alias),
-					zap.String(smscNameAttribute, def.Name),
-				)
-			}
-		}
-	}
-	m := SimpleConnector{
-		state:                       status,
-		alias:                       def.Alias,
-		connector:                   connector,
-		sendMessageCountMetric:      metrics[0],
-		sendMessageErrorCountMetric: metrics[1],
-		refreshCountMetric:          metrics[2],
-		refreshErrorCountMetric:     metrics[3],
-		bindCountMetric:             metrics[4],
-		bindErrorCountMetric:        metrics[5],
-	}
-	instance.connectorCache[def.Id] = &m
-	instance.connectors = append(instance.connectors, &m)
-	m.state = ReadyConnectorLifecycleState
 }
 
 func (instance *SimpleConnectorManager) metricsFrom(meter metric.Meter, definition model.Smpp, seq []string) ([]metric.Float64Counter, error) {
@@ -203,47 +151,16 @@ func (instance *SimpleConnectorManager) metricsFrom(meter metric.Meter, definiti
 	return r, nil
 }
 
-func (instance *SimpleConnectorManager) newClient(definition model.Smpp) (Client, error) {
-	var f smpp.HandlerFunc
-	var connector Client
-	if definition.Type == model.ReceiverType || definition.Type == model.TransceiverType {
-		f = instance.pduListenerFactory.New(definition)
-	}
-	switch definition.Type {
-	case model.ReceiverType:
-		connector = instance.connectorFactory.NewListenerConnector(definition, f)
-		break
-	case model.TransceiverType:
-		connector = instance.connectorFactory.NewTransmitterConnector(definition, f)
-		break
-	case model.TransmitterType:
-		connector = instance.connectorFactory.NewTransmitterConnector(definition, f)
-		break
-	default:
-		return nil, fmt.Errorf("type=%s isn't supported", definition.Type)
-	}
-	return connector, nil
-}
-
-func (instance *SimpleConnectorManager) bindConnector(connector Client) <-chan error {
-	ch := make(chan error, 1)
-	go func() {
-		err := connector.Bind()
-		ch <- err
-		close(ch)
-	}()
-	return ch
-}
-
 func (instance *SimpleConnectorManager) refresh() {
-	var wg sync.WaitGroup
 	instance.mutex.Lock()
-	zap.L().Info("Starting connector(s)")
+	defer instance.mutex.Unlock()
+	zap.L().Info("Starting client(s)")
+	var wg sync.WaitGroup
 	for _, connector := range instance.connectors {
-		if connector.GetState() != StartupConnectorLifecycleState {
+		if connector.GetState() != WaitConnectorLifecycleState {
 			continue
 		}
-		zap.L().Info(fmt.Sprintf("Starting smsc[id=%s] connector", connector.GetId()),
+		zap.L().Info(fmt.Sprintf("Starting smsc[id=%s] client", connector.GetId()),
 			zap.String(smscIdAttribute, connector.GetId()),
 			zap.String(smscAliasAttribute, connector.GetAlias()),
 			zap.String(smscStateAttribute, connector.GetState()),
@@ -251,15 +168,86 @@ func (instance *SimpleConnectorManager) refresh() {
 		wg.Add(1)
 		each := connector
 		go func() {
-			target := each.(*SimpleConnector)
-			if err := target.doBind(); err != nil {
-				target.state = ErrorConnectorLifecycleState
-			} else {
-				target.state = ReadyConnectorLifecycleState
-			}
+			instance.bindOrRefresh(each.(*SimpleConnector), nil)
 			wg.Done()
 		}()
 	}
 	wg.Wait()
-	instance.mutex.Unlock()
+}
+
+func (instance *SimpleConnectorManager) bindOrRefresh(c *SimpleConnector, e *ClientConnEvent) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.state = WaitConnectorLifecycleState
+	if e != nil {
+		absenceLogFactory := func(l zapcore.Level, msg string, err error) {
+			fieldOpts := []zap.Field{
+				zap.String(smscIdAttribute, c.GetId()),
+			}
+			if e != nil {
+				fieldOpts = append(fieldOpts, zap.String("event_type", string(e.Type)))
+				if e.Err != nil {
+					fieldOpts = append(fieldOpts, zap.String("event_error", e.Err.Error()))
+				}
+			}
+			if err != nil {
+				fieldOpts = append(fieldOpts, zap.Error(err))
+			}
+			zap.L().Log(l, msg, fieldOpts...)
+		}
+		_ = c.client.Close()
+		definition, err := instance.repository.FindById(c.GetId())
+		if err == nil {
+			client, prob := instance.newClient(definition)
+			if prob == nil {
+				c.client = client
+			}
+			err = prob
+		}
+		if err != nil {
+			absenceLogFactory(zap.ErrorLevel, "Cannot trigger refresh connector", err)
+		}
+		c.increaseMetricCounter(c.refreshCountMetric, c.refreshErrorCountMetric, err)
+		return
+	}
+	c.client.Bind()
+}
+
+func (instance *SimpleConnectorManager) onClientConnEvent(id string) ClientConnEventListener {
+	return func(event ClientConnEvent) {
+		c, hasValue := instance.connectorCache[id]
+		absenceLogFactory := func(l zapcore.Level, msg string, err error) {
+			fieldOpts := []zap.Field{
+				zap.String(smscIdAttribute, id),
+				zap.String("event_type", string(event.Type)),
+			}
+			if err != nil {
+				zap.Error(err)
+			}
+			if event.Err != nil {
+				fieldOpts = append(fieldOpts, zap.String("event_error", event.Err.Error()))
+			}
+			zap.L().Log(l, msg, fieldOpts...)
+		}
+		if !hasValue {
+			absenceLogFactory(zap.WarnLevel, "Cannot consume client event since client isn't present", nil)
+			return
+		}
+		switch event.Type {
+		case ClientConnBindErrorEventType, ClientConnErrorEventType:
+			c.setState(ErrorConnectorLifecycleState)
+			c.increaseMetricCounter(c.bindCountMetric, c.bindErrorCountMetric, event.Err)
+			break
+		case ClientConnBoundEventType:
+			c.setState(ReadyConnectorLifecycleState)
+			c.increaseMetricCounter(c.bindCountMetric, c.bindErrorCountMetric, nil)
+			break
+		case ClientConnDisconnectEventType:
+			c.setState(ClosedConnectorLifecycleState)
+			break
+		case ClientConnInterruptedEventType:
+			instance.bindOrRefresh(c, &event)
+			break
+		}
+	}
 }

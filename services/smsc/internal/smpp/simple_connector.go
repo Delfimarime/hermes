@@ -8,10 +8,10 @@ import (
 )
 
 type SimpleConnector struct {
-	mutex                       sync.Mutex
 	state                       string
 	alias                       string
-	connector                   Client
+	client                      Client
+	mutex                       sync.Mutex
 	sendMessageCountMetric      metric.Float64Counter // number_of_messages_sent
 	sendMessageErrorCountMetric metric.Float64Counter // number_of_messages_send_that_failed
 	refreshCountMetric          metric.Float64Counter // number_of_refreshes
@@ -25,11 +25,11 @@ func (instance *SimpleConnector) GetState() string {
 }
 
 func (instance *SimpleConnector) GetType() string {
-	return instance.connector.GetType()
+	return instance.client.GetType()
 }
 
 func (instance *SimpleConnector) GetId() string {
-	return instance.connector.GetId()
+	return instance.client.GetId()
 }
 
 func (instance *SimpleConnector) GetAlias() string {
@@ -37,31 +37,25 @@ func (instance *SimpleConnector) GetAlias() string {
 }
 
 func (instance *SimpleConnector) SendMessage(destination, message string) (SendMessageResponse, error) {
-	resp, err := instance.connector.(Client).SendMessage(destination, message)
+	resp, err := instance.client.(Client).SendMessage(destination, message)
 	instance.increaseMetricCounter(instance.sendMessageCountMetric, instance.sendMessageErrorCountMetric, err)
 	return resp, err
 }
 
-func (instance *SimpleConnector) doBind() error {
+func (instance *SimpleConnector) setState(state string) {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
-	err := instance.connector.Bind()
-	instance.increaseMetricCounter(instance.bindCountMetric, instance.bindErrorCountMetric, err)
-	return err
+	if instance.state == ClosedConnectorLifecycleState {
+		return
+	}
+	instance.state = state
 }
 
 func (instance *SimpleConnector) doClose() error {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
-	return instance.connector.Close()
-}
-
-func (instance *SimpleConnector) doRefresh() error {
-	instance.mutex.Lock()
-	defer instance.mutex.Unlock()
-	err := instance.connector.Refresh()
-	instance.increaseMetricCounter(instance.refreshCountMetric, instance.refreshErrorCountMetric, err)
-	return err
+	instance.state = ClosedConnectorLifecycleState
+	return instance.client.Close()
 }
 
 func (instance *SimpleConnector) increaseMetricCounter(onSuccess, onFailure metric.Float64Counter, err error) {

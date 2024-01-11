@@ -3,6 +3,7 @@ package smpp
 import (
 	goContext "context"
 	"github.com/delfimarime/hermes/services/smsc/internal/context"
+	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
 )
@@ -15,7 +16,7 @@ func GetUberFxModule() fx.Option {
 			},
 			func(
 				ctx context.Context,
-				repository Repository,
+				repository sdk.Repository,
 				pduListenerFactory *PduListenerFactory,
 			) ConnectorManager {
 				return &SimpleConnectorManager{

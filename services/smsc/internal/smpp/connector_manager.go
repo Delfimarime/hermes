@@ -3,6 +3,7 @@ package smpp
 import (
 	"fmt"
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
+	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
 	"github.com/delfimarime/hermes/services/smsc/pkg/config"
 	"github.com/fiorix/go-smpp/smpp"
 	"go.opentelemetry.io/otel"
@@ -14,7 +15,7 @@ import (
 
 type SimpleConnectorManager struct {
 	mutex              sync.Mutex
-	repository         Repository
+	repository         sdk.Repository
 	connectors         []Connector
 	pduListenerFactory *PduListenerFactory
 	configuration      config.Configuration

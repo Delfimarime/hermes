@@ -2,6 +2,7 @@ package smpp
 
 import (
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
+	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
 )
 
 type SequenceBasedSmsRepository struct {
@@ -27,7 +28,7 @@ func (s SequenceBasedSmsRepository) FindById(id string) (model.Smpp, error) {
 			}
 		}
 	}
-	return model.Smpp{}, &EntityNotFoundError{
+	return model.Smpp{}, &sdk.EntityNotFoundError{
 		Id:   id,
 		Type: "Smpp",
 	}

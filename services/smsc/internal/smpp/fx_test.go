@@ -6,6 +6,7 @@ import (
 	"github.com/delfimarime/hermes/services/smsc/internal/context"
 	"github.com/delfimarime/hermes/services/smsc/internal/metric"
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
+	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
 	"github.com/delfimarime/hermes/services/smsc/pkg/config"
 	"github.com/docker/go-connections/nat"
 	"github.com/google/uuid"
@@ -274,7 +275,7 @@ func NewApp(t *testing.T, cfg TestAppConfig, fxOptions ...fx.Option) *fxtest.App
 		fx.Provide(func() SmsEventListener {
 			return smsListener
 		}),
-		fx.Provide(func() Repository {
+		fx.Provide(func() sdk.Repository {
 			smppList := []model.Smpp{
 				{
 					Id:          cfg.SenderId,

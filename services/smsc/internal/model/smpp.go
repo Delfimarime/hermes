@@ -11,10 +11,10 @@ type Smpp struct {
 	Name        string
 	Description string
 	PoweredBy   string
-	Contact     []Person
 	Type        string
-	Settings    Settings
 	Alias       string
+	Settings    Settings
+	Condition   []Condition
 }
 
 type Settings struct {

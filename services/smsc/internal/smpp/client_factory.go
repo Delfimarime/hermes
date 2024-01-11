@@ -1,19 +1,29 @@
 package smpp
 
 import (
+	"fmt"
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
 	"github.com/delfimarime/hermes/services/smsc/pkg/common"
 	"github.com/fiorix/go-smpp/smpp"
+	"go.uber.org/zap"
 	"reflect"
 	"time"
 )
 
-func newListenerConnector(config model.Smpp, cl ClientConnEventListener, f smpp.HandlerFunc) Client {
+func newReceiverClient(config model.Smpp, cl ClientConnEventListener, f smpp.HandlerFunc) Client {
+	zap.L().Debug(fmt.Sprintf("Creating smpp.ReceiverClient for smsc[id=%s,type=%s]", config.Id, config.Type),
+		zap.String(smscIdAttribute, config.Id), zap.String(smscNameAttribute, config.Name),
+		zap.String(smscTypeAttribute, config.Type), zap.String(smscAliasAttribute, config.Alias),
+	)
 	target := newNoOpConnector(config, model.ReceiverType, cl, f)
 	return &target
 }
 
-func newTransmitterConnector(config model.Smpp, cl ClientConnEventListener, f smpp.HandlerFunc) Client {
+func newTransmitterClient(config model.Smpp, cl ClientConnEventListener, f smpp.HandlerFunc) Client {
+	zap.L().Debug(fmt.Sprintf("Creating smpp.TransmitterClient for smsc[id=%s,type=%s]", config.Id, config.Type),
+		zap.String(smscIdAttribute, config.Id), zap.String(smscNameAttribute, config.Name),
+		zap.String(smscTypeAttribute, config.Type), zap.String(smscAliasAttribute, config.Alias),
+	)
 	awaitDeliveryReport := f != nil
 	if config.Settings.Delivery != nil {
 		awaitDeliveryReport = config.Settings.Delivery.AwaitReport
@@ -30,6 +40,7 @@ func newTransmitterConnector(config model.Smpp, cl ClientConnEventListener, f sm
 func newNoOpConnector(config model.Smpp, definitionType string, cl ClientConnEventListener, f smpp.HandlerFunc) SimpleClient {
 	return SimpleClient{
 		clientEventListener: cl,
+		id:                  config.Id,
 		smppType:            definitionType,
 		smppConn:            newSmppClientFrom(config.Settings, definitionType, f),
 	}

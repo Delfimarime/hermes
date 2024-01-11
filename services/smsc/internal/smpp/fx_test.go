@@ -14,6 +14,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
+	"go.uber.org/zap"
 	"strconv"
 	"sync"
 	"testing"
@@ -33,7 +34,7 @@ func TestSendSms(t *testing.T) {
 				fx.Hook{
 					OnStart: func(ctx goContext.Context) error {
 						time.Sleep(2 * time.Second)
-						c := cm.(*SimpleConnectorManager).connectorCache[senderId]
+						c := cm.(*SimpleConnectorManager).connectorsCache[senderId]
 						r, err := c.SendMessage("+258849900000", "Hi")
 						if err != nil {
 							return err
@@ -80,7 +81,7 @@ func TestListenToMessage(t *testing.T) {
 							time.Sleep(1 * time.Second)
 							wg.Add(1)
 							go func() {
-								c := cm.(*SimpleConnectorManager).connectorCache[senderId]
+								c := cm.(*SimpleConnectorManager).connectorsCache[senderId]
 								if _, err := c.SendMessage(destination, msg); err != nil {
 									t.Error(err)
 								}
@@ -138,7 +139,7 @@ func TestSendSmsAndCatchDeliveryReport(t *testing.T) {
 					wg.Add(1)
 					go func() {
 						time.Sleep(1 * time.Second)
-						c := cm.(*SimpleConnectorManager).connectorCache[senderId]
+						c := cm.(*SimpleConnectorManager).connectorsCache[senderId]
 						if r, err := c.SendMessage(destination, msg); err != nil {
 							t.Error(err)
 						} else {
@@ -224,6 +225,13 @@ type TestAppConfig struct {
 }
 
 func NewApp(t *testing.T, cfg TestAppConfig, fxOptions ...fx.Option) *fxtest.App {
+	// CONFIGURE TEST LOGGER
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		t.Fatal(err)
+	}
+	zap.ReplaceGlobals(logger)
+	// CONFIGURE APPLICATION
 	senderType := model.TransmitterType
 	if cfg.SenderType != "" {
 		senderType = cfg.SenderType

@@ -2,8 +2,10 @@ package smpp
 
 import (
 	"context"
+	"fmt"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.uber.org/zap"
 	"sync"
 )
 
@@ -38,17 +40,45 @@ func (instance *SimpleConnector) GetAlias() string {
 
 func (instance *SimpleConnector) SendMessage(destination, message string) (SendMessageResponse, error) {
 	if instance.state != ReadyConnectorLifecycleState {
-		return SendMessageResponse{}, UnavailableConnectorError{}
+		zap.L().Warn(fmt.Sprintf("Cannot Send message from smpp.Connector[id=%s] because of state",
+			instance.GetId()), zap.String(smscIdAttribute, instance.GetId()),
+			zap.String(smscAliasAttribute, instance.GetAlias()),
+			zap.String(smscStateAttribute, instance.GetState().string()),
+		)
+		return SendMessageResponse{}, UnavailableConnectorError{state: instance.GetState().string()}
 	}
+	zap.L().Debug(fmt.Sprintf("Sending message from smpp.Connector[id=%s] to specified msisdn",
+		instance.GetId()), zap.String(smscIdAttribute, instance.GetId()),
+		zap.String(smscAliasAttribute, instance.GetAlias()),
+		zap.String(smscStateAttribute, instance.GetState().string()),
+		zap.String(smsDestinationAttribute, destination),
+	)
 	resp, err := instance.client.(Client).SendMessage(destination, message)
+	if err == nil {
+		zap.L().Debug(fmt.Sprintf("Message sent from smpp.Connector[id=%s] to specified msisdn",
+			instance.GetId()), zap.String(smscIdAttribute, instance.GetId()),
+			zap.String(smscAliasAttribute, instance.GetAlias()),
+			zap.String(smscStateAttribute, instance.GetState().string()),
+			zap.String(smsIdAttribute, resp.Id),
+			zap.String(smsDestinationAttribute, destination),
+		)
+	}
 	instance.increaseMetricCounter(instance.sendMessageCountMetric, instance.sendMessageErrorCountMetric, err)
 	return resp, err
 }
 
 func (instance *SimpleConnector) setState(state State) {
+	zap.L().Debug(fmt.Sprintf("Changing smpp.Connector[id=%s] state to %s",
+		instance.GetId(), instance.GetState().string()), zap.String(smscIdAttribute, instance.GetId()),
+		zap.String(smscAliasAttribute, instance.GetAlias()), zap.String(smscStateAttribute, state.string()),
+	)
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
 	if instance.state == ClosedConnectorLifecycleState {
+		zap.L().Warn(fmt.Sprintf("Cannot change  smpp.Connector[id=%s] state to %s",
+			instance.GetId(), instance.GetState().string()), zap.String(smscIdAttribute, instance.GetId()),
+			zap.String(smscAliasAttribute, instance.GetAlias()), zap.String(smscStateAttribute, state.string()),
+		)
 		return
 	}
 	instance.state = state

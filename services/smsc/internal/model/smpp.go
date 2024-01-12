@@ -14,7 +14,6 @@ type Smpp struct {
 	Type        string
 	Alias       string
 	Settings    Settings
-	Condition   []Condition
 }
 
 type Settings struct {

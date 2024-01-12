@@ -219,11 +219,11 @@ func TestToPredicate_with_subject_part_of_sms_min_and_max_length(t *testing.T) {
 	}
 	for _, tt := range definitions {
 		t.Run(tt.name, func(t *testing.T) {
-			var messages []asyncapi.Message = nil
+			var messages []asyncapi.SendSmsRequestPart = nil
 			if tt.parts != nil {
-				messages = make([]asyncapi.Message, 0)
+				messages = make([]asyncapi.SendSmsRequestPart, 0)
 				for _, content := range tt.parts {
-					messages = append(messages, asyncapi.Message{
+					messages = append(messages, asyncapi.SendSmsRequestPart{
 						Content: content,
 					})
 				}

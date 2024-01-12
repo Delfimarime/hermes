@@ -12,8 +12,8 @@ import (
 
 func newReceiverClient(config model.Smpp, cl ClientConnEventListener, f smpp.HandlerFunc) Client {
 	zap.L().Debug(fmt.Sprintf("Creating smpp.ReceiverClient for smsc[id=%s,type=%s]", config.Id, config.Type),
-		zap.String(smscIdAttribute, config.Id), zap.String(smscNameAttribute, config.Name),
-		zap.String(smscTypeAttribute, config.Type), zap.String(smscAliasAttribute, config.Alias),
+		zap.String(SmscIdAttribute, config.Id), zap.String(SmscNameAttribute, config.Name),
+		zap.String(SmscTypeAttribute, config.Type), zap.String(SmscAliasAttribute, config.Alias),
 	)
 	target := newNoOpConnector(config, model.ReceiverType, cl, f)
 	return &target
@@ -21,8 +21,8 @@ func newReceiverClient(config model.Smpp, cl ClientConnEventListener, f smpp.Han
 
 func newTransmitterClient(config model.Smpp, cl ClientConnEventListener, f smpp.HandlerFunc) Client {
 	zap.L().Debug(fmt.Sprintf("Creating smpp.TransmitterClient for smsc[id=%s,type=%s]", config.Id, config.Type),
-		zap.String(smscIdAttribute, config.Id), zap.String(smscNameAttribute, config.Name),
-		zap.String(smscTypeAttribute, config.Type), zap.String(smscAliasAttribute, config.Alias),
+		zap.String(SmscIdAttribute, config.Id), zap.String(SmscNameAttribute, config.Name),
+		zap.String(SmscTypeAttribute, config.Type), zap.String(SmscAliasAttribute, config.Alias),
 	)
 	awaitDeliveryReport := f != nil
 	if config.Settings.Delivery != nil {

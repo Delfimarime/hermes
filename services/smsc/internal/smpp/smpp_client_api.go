@@ -18,6 +18,7 @@ const (
 type TransmitterConn interface {
 	smpp.ClientConn
 	Submit(sm *smpp.ShortMessage) (*smpp.ShortMessage, error)
+	SubmitLongMsg(sm *smpp.ShortMessage) ([]smpp.ShortMessage, error)
 }
 
 type Client interface {

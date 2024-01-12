@@ -8,6 +8,7 @@ import (
 type Repository interface {
 	FindAll() ([]model.Smpp, error)
 	FindById(id string) (model.Smpp, error)
+	GetConditionsFrom(id string) ([]model.Condition, error)
 }
 
 type EntityNotFoundError struct {

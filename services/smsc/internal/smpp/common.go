@@ -4,11 +4,11 @@ const (
 	smppClientEventTypeAttribute    = "smpp_client_event_type"
 	smppClientEventProblemAttribute = "smpp_client_event_problem"
 
-	smscIdAttribute    = "smsc_id"
-	smscNameAttribute  = "smsc_name"
-	smscAliasAttribute = "smsc_alias"
+	SmscIdAttribute    = "smsc_id"
+	SmscNameAttribute  = "smsc_name"
+	SmscAliasAttribute = "smsc_alias"
+	SmscTypeAttribute  = "smsc_type"
 	smscStateAttribute = "smsc_state"
-	smscTypeAttribute  = "smsc_type"
 
 	smsIdAttribute          = "sms_id"
 	smsDestinationAttribute = "sms_message"

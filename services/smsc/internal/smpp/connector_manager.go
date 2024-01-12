@@ -57,8 +57,8 @@ func (instance *SimpleConnectorManager) Close() error {
 		each := v
 		if err := each.doClose(); err != nil {
 			if err != nil {
-				zap.L().Error(fmt.Sprintf("Unable to close smpp.Connector[id=%s]", v.GetId()),
-					zap.String(smscIdAttribute, v.GetId()), zap.String(smscAliasAttribute, v.GetAlias()),
+				zap.L().Error(fmt.Sprintf("Unable to close smpp.connector[id=%s]", v.GetId()),
+					zap.String(SmscIdAttribute, v.GetId()), zap.String(SmscAliasAttribute, v.GetAlias()),
 					zap.Error(err),
 				)
 			}
@@ -72,25 +72,25 @@ func (instance *SimpleConnectorManager) Close() error {
 func (instance *SimpleConnectorManager) setConnectors(seq ...model.Smpp) {
 	for _, definition := range seq {
 		zap.L().Info(fmt.Sprintf("Creating smpp.Client for smsc[id=%s]", definition.Id),
-			zap.String(smscIdAttribute, definition.Id), zap.String(smscAliasAttribute, definition.Alias),
-			zap.String(smscNameAttribute, definition.Name),
+			zap.String(SmscIdAttribute, definition.Id), zap.String(SmscAliasAttribute, definition.Alias),
+			zap.String(SmscNameAttribute, definition.Name),
 		)
 		client, prob := instance.newClient(definition)
 		if prob != nil {
 			zap.L().Error(fmt.Sprintf("Unable to create smpp.Client for smsc[id=%s]", definition.Id),
-				zap.String(smscIdAttribute, definition.Id), zap.String(smscNameAttribute, definition.Name),
-				zap.String(smscAliasAttribute, definition.Alias), zap.Error(prob),
+				zap.String(SmscIdAttribute, definition.Id), zap.String(SmscNameAttribute, definition.Name),
+				zap.String(SmscAliasAttribute, definition.Alias), zap.Error(prob),
 			)
 		}
-		zap.L().Debug(fmt.Sprintf("Creating smpp.Connector for smsc[id=%s]", definition.Id),
-			zap.String(smscIdAttribute, definition.Id), zap.String(smscNameAttribute, definition.Name),
-			zap.String(smscAliasAttribute, definition.Alias), zap.String(smscTypeAttribute, definition.Type),
+		zap.L().Debug(fmt.Sprintf("Creating smpp.connector for smsc[id=%s]", definition.Id),
+			zap.String(SmscIdAttribute, definition.Id), zap.String(SmscNameAttribute, definition.Name),
+			zap.String(SmscAliasAttribute, definition.Alias), zap.String(SmscTypeAttribute, definition.Type),
 			zap.Error(prob),
 		)
 		connector := instance.newConnectorFrom(client, definition)
-		zap.L().Debug(fmt.Sprintf("Registering smpp.Connector for smsc[id=%s]", definition.Id),
-			zap.String(smscIdAttribute, definition.Id), zap.String(smscNameAttribute, definition.Name),
-			zap.String(smscAliasAttribute, definition.Alias), zap.String(smscTypeAttribute, definition.Type),
+		zap.L().Debug(fmt.Sprintf("Registering smpp.connector for smsc[id=%s]", definition.Id),
+			zap.String(SmscIdAttribute, definition.Id), zap.String(SmscNameAttribute, definition.Name),
+			zap.String(SmscAliasAttribute, definition.Alias), zap.String(SmscTypeAttribute, definition.Type),
 			zap.Error(prob),
 		)
 		instance.connectorsCache[definition.Id] = connector
@@ -100,15 +100,15 @@ func (instance *SimpleConnectorManager) setConnectors(seq ...model.Smpp) {
 
 func (instance *SimpleConnectorManager) newClient(definition model.Smpp) (Client, error) {
 	zap.L().Debug(fmt.Sprintf("Creating smpp.Client for smsc[id=%s]", definition.Id),
-		zap.String(smscIdAttribute, definition.Id), zap.String(smscNameAttribute, definition.Name),
-		zap.String(smscAliasAttribute, definition.Alias),
+		zap.String(SmscIdAttribute, definition.Id), zap.String(SmscNameAttribute, definition.Name),
+		zap.String(SmscAliasAttribute, definition.Alias),
 	)
 	var connector Client
 	var f smpp.HandlerFunc
 	if definition.Type == model.ReceiverType || definition.Type == model.TransceiverType {
 		zap.L().Debug(fmt.Sprintf("Creating PduListener for smsc[id=%s,type=%s]", definition.Id, definition.Type),
-			zap.String(smscIdAttribute, definition.Id), zap.String(smscNameAttribute, definition.Name),
-			zap.String(smscTypeAttribute, definition.Type), zap.String(smscAliasAttribute, definition.Alias),
+			zap.String(SmscIdAttribute, definition.Id), zap.String(SmscNameAttribute, definition.Name),
+			zap.String(SmscTypeAttribute, definition.Type), zap.String(SmscAliasAttribute, definition.Alias),
 		)
 		f = instance.pduListenerFactory.New(definition)
 	}
@@ -135,16 +135,16 @@ func (instance *SimpleConnectorManager) newConnectorFrom(cl Client, def model.Sm
 		"number_of_bindings",
 		"number_of_bindings_attempts",
 	}
-	zap.L().Debug(fmt.Sprintf("Creating smpp.Connector metrics for smsc[id=%s]", def.Id),
-		zap.String(smscIdAttribute, def.Id), zap.String(smscNameAttribute, def.Name),
-		zap.String(smscAliasAttribute, def.Alias), zap.Strings("names_of_metrics", namesOfMetrics))
+	zap.L().Debug(fmt.Sprintf("Creating smpp.connector metrics for smsc[id=%s]", def.Id),
+		zap.String(SmscIdAttribute, def.Id), zap.String(SmscNameAttribute, def.Name),
+		zap.String(SmscAliasAttribute, def.Alias), zap.Strings("names_of_metrics", namesOfMetrics))
 	metrics := make([]metric.Float64Counter, len(namesOfMetrics))
 	arr, err := instance.metricsFrom(otel.Meter("hermes_smsc"), def, namesOfMetrics)
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("Cannot create smpp.Connector metrics for smsc[id=%s]", def.Id),
-			zap.String(smscIdAttribute, def.Id),
-			zap.String(smscAliasAttribute, def.Alias),
-			zap.String(smscNameAttribute, def.Name),
+		zap.L().Error(fmt.Sprintf("Cannot create smpp.connector metrics for smsc[id=%s]", def.Id),
+			zap.String(SmscIdAttribute, def.Id),
+			zap.String(SmscAliasAttribute, def.Alias),
+			zap.String(SmscNameAttribute, def.Name),
 			zap.Error(err),
 		)
 		state = ErrorConnectorLifecycleState
@@ -165,9 +165,9 @@ func (instance *SimpleConnectorManager) newConnectorFrom(cl Client, def model.Sm
 
 func (instance *SimpleConnectorManager) metricsFrom(meter metric.Meter, definition model.Smpp, seq []string) ([]metric.Float64Counter, error) {
 	producer := func(metricName string) (metric.Float64Counter, error) {
-		zap.L().Debug(fmt.Sprintf("Creating smpp.Connector metric for smsc[id=%s]", definition.Id),
-			zap.String(smscIdAttribute, definition.Id), zap.String(smscNameAttribute, definition.Name),
-			zap.String(smscAliasAttribute, definition.Alias), zap.String("metric_name", metricName),
+		zap.L().Debug(fmt.Sprintf("Creating smpp.connector metric for smsc[id=%s]", definition.Id),
+			zap.String(SmscIdAttribute, definition.Id), zap.String(SmscNameAttribute, definition.Name),
+			zap.String(SmscAliasAttribute, definition.Alias), zap.String("metric_name", metricName),
 			zap.String("metric_type", "Float64Counter"))
 		return meter.Float64Counter(metricName)
 	}
@@ -176,9 +176,9 @@ func (instance *SimpleConnectorManager) metricsFrom(meter metric.Meter, definiti
 		metricName := fmt.Sprintf("hermes_smsc_%s_%s", definition.Alias, name)
 		m, err := producer(metricName)
 		if err != nil {
-			zap.L().Debug(fmt.Sprintf("Couldn't create smpp.Connector metric for smsc[id=%s]", definition.Id),
-				zap.String(smscIdAttribute, definition.Id), zap.String(smscNameAttribute, definition.Name),
-				zap.String(smscAliasAttribute, definition.Alias), zap.String("metric_name", metricName),
+			zap.L().Debug(fmt.Sprintf("Couldn't create smpp.connector metric for smsc[id=%s]", definition.Id),
+				zap.String(SmscIdAttribute, definition.Id), zap.String(SmscNameAttribute, definition.Name),
+				zap.String(SmscAliasAttribute, definition.Alias), zap.String("metric_name", metricName),
 				zap.String("metric_type", "Float64Counter"),
 				zap.Error(err),
 			)
@@ -192,12 +192,12 @@ func (instance *SimpleConnectorManager) metricsFrom(meter metric.Meter, definiti
 func (instance *SimpleConnectorManager) refresh() {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
-	zap.L().Info("Starting managed smpp.Connector(s)")
+	zap.L().Info("Starting managed smpp.connector(s)")
 	var wg sync.WaitGroup
 	for _, connector := range instance.connectors {
 		if connector.GetState() != StartupConnectorLifecycleState {
-			zap.L().Warn(fmt.Sprintf("Cannot initialize smpp.Connector[id=%s] due to it's state", connector.GetId()),
-				zap.String(smscIdAttribute, connector.GetId()), zap.String(smscAliasAttribute, connector.GetAlias()),
+			zap.L().Warn(fmt.Sprintf("Cannot initialize smpp.connector[id=%s] due to it's state", connector.GetId()),
+				zap.String(SmscIdAttribute, connector.GetId()), zap.String(SmscAliasAttribute, connector.GetAlias()),
 				zap.String(smscStateAttribute, connector.GetState().string()),
 			)
 			continue
@@ -205,14 +205,14 @@ func (instance *SimpleConnectorManager) refresh() {
 		wg.Add(1)
 		each := connector
 		go func() {
-			zap.L().Debug(fmt.Sprintf("Starting managed smpp.Connector[id=%s]", each.GetId()),
-				zap.String(smscIdAttribute, each.GetId()), zap.String(smscAliasAttribute, each.GetAlias()),
+			zap.L().Debug(fmt.Sprintf("Starting managed smpp.connector[id=%s]", each.GetId()),
+				zap.String(SmscIdAttribute, each.GetId()), zap.String(SmscAliasAttribute, each.GetAlias()),
 				zap.String(smscStateAttribute, each.GetState().string()),
 			)
 			instance.bindOrRefresh(each.(*SimpleConnector), nil)
 			defer wg.Done()
-			zap.L().Debug(fmt.Sprintf("Successfully started smpp.Connector[id=%s]", each.GetId()),
-				zap.String(smscIdAttribute, each.GetId()), zap.String(smscAliasAttribute, each.GetAlias()),
+			zap.L().Debug(fmt.Sprintf("Successfully started smpp.connector[id=%s]", each.GetId()),
+				zap.String(SmscIdAttribute, each.GetId()), zap.String(SmscAliasAttribute, each.GetAlias()),
 			)
 		}()
 	}
@@ -226,19 +226,19 @@ func (instance *SimpleConnectorManager) bindOrRefresh(c *SimpleConnector, e *Cli
 	if e != nil {
 		desc = "Refreshing"
 	}
-	zap.L().Debug(fmt.Sprintf("%s managed smpp.Connector[id=%s] binding", desc, c.GetId()),
-		zap.String(smscIdAttribute, c.GetId()), zap.String(smscAliasAttribute, c.GetAlias()),
+	zap.L().Debug(fmt.Sprintf("%s managed smpp.connector[id=%s] binding", desc, c.GetId()),
+		zap.String(SmscIdAttribute, c.GetId()), zap.String(SmscAliasAttribute, c.GetAlias()),
 		zap.String(smscStateAttribute, c.GetState().string()),
 	)
 	c.state = WaitConnectorLifecycleState
-	zap.L().Debug(fmt.Sprintf("Changing managed smpp.Connector[id=%s] state to %s",
-		c.GetId(), c.GetState().string()), zap.String(smscIdAttribute, c.GetId()),
-		zap.String(smscAliasAttribute, c.GetAlias()), zap.String(smscStateAttribute, c.GetState().string()),
+	zap.L().Debug(fmt.Sprintf("Changing managed smpp.connector[id=%s] state to %s",
+		c.GetId(), c.GetState().string()), zap.String(SmscIdAttribute, c.GetId()),
+		zap.String(SmscAliasAttribute, c.GetAlias()), zap.String(smscStateAttribute, c.GetState().string()),
 	)
 	if e != nil {
 		absenceLogFactory := func(l zapcore.Level, msg string, err error) {
 			fieldOpts := []zap.Field{
-				zap.String(smscIdAttribute, c.GetId()),
+				zap.String(SmscIdAttribute, c.GetId()),
 			}
 			if e != nil {
 				fieldOpts = append(fieldOpts, zap.String("event_type", string(e.Type)))
@@ -251,20 +251,20 @@ func (instance *SimpleConnectorManager) bindOrRefresh(c *SimpleConnector, e *Cli
 			}
 			zap.L().Log(l, msg, fieldOpts...)
 		}
-		zap.L().Debug(fmt.Sprintf("Closing smpp.Connector[id=%s] smpp.Client", c.GetId()),
-			zap.String(smscIdAttribute, c.GetId()), zap.String(smscAliasAttribute, c.GetAlias()),
+		zap.L().Debug(fmt.Sprintf("Closing smpp.connector[id=%s] smpp.Client", c.GetId()),
+			zap.String(SmscIdAttribute, c.GetId()), zap.String(SmscAliasAttribute, c.GetAlias()),
 			zap.String(smscStateAttribute, c.GetState().string()),
 		)
 		err := c.client.Close()
 		if err != nil {
-			zap.L().Warn(fmt.Sprintf("Closing smpp.Connector[id=%s] smpp.Client", c.GetId()),
-				zap.String(smscIdAttribute, c.GetId()), zap.String(smscAliasAttribute, c.GetAlias()),
+			zap.L().Warn(fmt.Sprintf("Closing smpp.connector[id=%s] smpp.Client", c.GetId()),
+				zap.String(SmscIdAttribute, c.GetId()), zap.String(SmscAliasAttribute, c.GetAlias()),
 				zap.String(smscStateAttribute, c.GetState().string()),
 				zap.Error(err),
 			)
 		}
-		zap.L().Debug(fmt.Sprintf("Retriving smpp.Connector[id=%s] configuration from Repository", c.GetId()),
-			zap.String(smscIdAttribute, c.GetId()), zap.String(smscAliasAttribute, c.GetAlias()),
+		zap.L().Debug(fmt.Sprintf("Retriving smpp.connector[id=%s] configuration from Repository", c.GetId()),
+			zap.String(SmscIdAttribute, c.GetId()), zap.String(SmscAliasAttribute, c.GetAlias()),
 			zap.String(smscStateAttribute, c.GetState().string()),
 		)
 		definition, err := instance.repository.FindById(c.GetId())
@@ -281,8 +281,8 @@ func (instance *SimpleConnectorManager) bindOrRefresh(c *SimpleConnector, e *Cli
 		c.increaseMetricCounter(c.refreshCountMetric, c.refreshErrorCountMetric, err)
 		return
 	}
-	zap.L().Debug(fmt.Sprintf("Binding managed smpp.Connector[id=%s]", c.GetId()),
-		zap.String(smscIdAttribute, c.GetId()), zap.String(smscAliasAttribute, c.GetAlias()),
+	zap.L().Debug(fmt.Sprintf("Binding managed smpp.connector[id=%s]", c.GetId()),
+		zap.String(SmscIdAttribute, c.GetId()), zap.String(SmscAliasAttribute, c.GetAlias()),
 		zap.String(smscStateAttribute, c.GetState().string()),
 	)
 	c.client.Bind()
@@ -291,12 +291,12 @@ func (instance *SimpleConnectorManager) bindOrRefresh(c *SimpleConnector, e *Cli
 func (instance *SimpleConnectorManager) onClientConnEvent(id string) ClientConnEventListener {
 	return func(event ClientConnEvent) {
 		zap.L().Debug(fmt.Sprintf("Handling smpp.Client[id=%s] smpp.ClientConnEvent", id),
-			zap.String(smscIdAttribute, id),
+			zap.String(SmscIdAttribute, id),
 			zap.String(smppClientEventTypeAttribute, string(event.Type)),
 		)
 		absenceLogFactory := func(l zapcore.Level, msg string, err error) {
 			fieldOpts := []zap.Field{
-				zap.String(smscIdAttribute, id),
+				zap.String(SmscIdAttribute, id),
 				zap.String(smppClientEventTypeAttribute, string(event.Type)),
 			}
 			if err != nil {

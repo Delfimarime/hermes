@@ -33,3 +33,7 @@ func (s SequenceBasedSmsRepository) FindById(id string) (model.Smpp, error) {
 		Type: "Smpp",
 	}
 }
+
+func (s SequenceBasedSmsRepository) GetConditionsFrom(id string) ([]model.Condition, error) {
+	return nil, nil
+}

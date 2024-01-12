@@ -2,7 +2,9 @@ package smpp
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/fiorix/go-smpp/smpp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
@@ -10,10 +12,10 @@ import (
 )
 
 type SimpleConnector struct {
+	state                       State
 	alias                       string
 	client                      Client
 	mutex                       sync.Mutex
-	state                       State
 	sendMessageCountMetric      metric.Float64Counter // number_of_messages_sent
 	sendMessageErrorCountMetric metric.Float64Counter // number_of_messages_send_that_failed
 	refreshCountMetric          metric.Float64Counter // number_of_refreshes
@@ -40,44 +42,48 @@ func (instance *SimpleConnector) GetAlias() string {
 
 func (instance *SimpleConnector) SendMessage(destination, message string) (SendMessageResponse, error) {
 	if instance.state != ReadyConnectorLifecycleState {
-		zap.L().Warn(fmt.Sprintf("Cannot Send message from smpp.Connector[id=%s] because of state",
-			instance.GetId()), zap.String(smscIdAttribute, instance.GetId()),
-			zap.String(smscAliasAttribute, instance.GetAlias()),
+		zap.L().Warn(fmt.Sprintf("Cannot Send message from smpp.connector[id=%s] because of state",
+			instance.GetId()), zap.String(SmscIdAttribute, instance.GetId()),
+			zap.String(SmscAliasAttribute, instance.GetAlias()),
 			zap.String(smscStateAttribute, instance.GetState().string()),
 		)
 		return SendMessageResponse{}, UnavailableConnectorError{state: instance.GetState().string()}
 	}
-	zap.L().Debug(fmt.Sprintf("Sending message from smpp.Connector[id=%s] to specified msisdn",
-		instance.GetId()), zap.String(smscIdAttribute, instance.GetId()),
-		zap.String(smscAliasAttribute, instance.GetAlias()),
+	zap.L().Debug(fmt.Sprintf("Sending message from smpp.connector[id=%s] to specified msisdn",
+		instance.GetId()), zap.String(SmscIdAttribute, instance.GetId()),
+		zap.String(SmscAliasAttribute, instance.GetAlias()),
 		zap.String(smscStateAttribute, instance.GetState().string()),
 		zap.String(smsDestinationAttribute, destination),
 	)
 	resp, err := instance.client.(Client).SendMessage(destination, message)
 	if err == nil {
-		zap.L().Debug(fmt.Sprintf("Message sent from smpp.Connector[id=%s] to specified msisdn",
-			instance.GetId()), zap.String(smscIdAttribute, instance.GetId()),
-			zap.String(smscAliasAttribute, instance.GetAlias()),
+		zap.L().Debug(fmt.Sprintf("Message sent from smpp.connector[id=%s] to specified msisdn",
+			instance.GetId()), zap.String(SmscIdAttribute, instance.GetId()),
+			zap.String(SmscAliasAttribute, instance.GetAlias()),
 			zap.String(smscStateAttribute, instance.GetState().string()),
 			zap.String(smsIdAttribute, resp.Id),
 			zap.String(smsDestinationAttribute, destination),
 		)
+	}
+	isClientConnectionError := errors.Is(err, smpp.ErrNotConnected) || errors.Is(err, smpp.ErrNotBound)
+	if isClientConnectionError {
+		return SendMessageResponse{}, UnavailableConnectorError{state: instance.GetState().string(), causedBy: err}
 	}
 	instance.increaseMetricCounter(instance.sendMessageCountMetric, instance.sendMessageErrorCountMetric, err)
 	return resp, err
 }
 
 func (instance *SimpleConnector) setState(state State) {
-	zap.L().Debug(fmt.Sprintf("Changing smpp.Connector[id=%s] state to %s",
-		instance.GetId(), instance.GetState().string()), zap.String(smscIdAttribute, instance.GetId()),
-		zap.String(smscAliasAttribute, instance.GetAlias()), zap.String(smscStateAttribute, state.string()),
+	zap.L().Debug(fmt.Sprintf("Changing smpp.connector[id=%s] state to %s",
+		instance.GetId(), instance.GetState().string()), zap.String(SmscIdAttribute, instance.GetId()),
+		zap.String(SmscAliasAttribute, instance.GetAlias()), zap.String(smscStateAttribute, state.string()),
 	)
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
 	if instance.state == ClosedConnectorLifecycleState {
-		zap.L().Warn(fmt.Sprintf("Cannot change  smpp.Connector[id=%s] state to %s",
-			instance.GetId(), instance.GetState().string()), zap.String(smscIdAttribute, instance.GetId()),
-			zap.String(smscAliasAttribute, instance.GetAlias()), zap.String(smscStateAttribute, state.string()),
+		zap.L().Warn(fmt.Sprintf("Cannot change  smpp.connector[id=%s] state to %s",
+			instance.GetId(), instance.GetState().string()), zap.String(SmscIdAttribute, instance.GetId()),
+			zap.String(SmscAliasAttribute, instance.GetAlias()), zap.String(smscStateAttribute, state.string()),
 		)
 		return
 	}
@@ -94,14 +100,14 @@ func (instance *SimpleConnector) doClose() error {
 func (instance *SimpleConnector) increaseMetricCounter(onSuccess, onFailure metric.Float64Counter, err error) {
 	if err != nil {
 		onFailure.Add(context.TODO(), 1, metric.WithAttributes(
-			attribute.String(smscIdAttribute, instance.GetId()),
-			attribute.String(smscAliasAttribute, instance.GetAlias()),
+			attribute.String(SmscIdAttribute, instance.GetId()),
+			attribute.String(SmscAliasAttribute, instance.GetAlias()),
 			attribute.String(errorAttribute, truncate(err.Error(), 15)),
 		))
 	} else {
 		onSuccess.Add(context.TODO(), 1, metric.WithAttributes(
-			attribute.String(smscIdAttribute, instance.GetId()),
-			attribute.String(smscAliasAttribute, instance.GetAlias()),
+			attribute.String(SmscIdAttribute, instance.GetId()),
+			attribute.String(SmscAliasAttribute, instance.GetAlias()),
 		))
 	}
 }

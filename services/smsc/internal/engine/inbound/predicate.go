@@ -13,10 +13,10 @@ type SendSmsRequestPredicate func(request asyncapi.SendSmsRequest) bool
 type SendSmsRequestPredicateFactory func(model.Predicate) (SendSmsRequestPredicate, error)
 
 const (
-	Tag         Subject = "tag"
-	Source      Subject = "source"
-	PartsOfSms  Subject = "messages"
 	Destination Subject = "destination"
+	Tag         Subject = "tag"
+	Source      Subject = "from"
+	PartsOfSms  Subject = "messages"
 )
 
 var predicateFactories = map[Subject]SendSmsRequestPredicateFactory{
@@ -26,8 +26,8 @@ var predicateFactories = map[Subject]SendSmsRequestPredicateFactory{
 	Destination: newDestinationPredicate,
 }
 
-func toPredicate(conditions []model.Condition) (SendSmsRequestPredicate, error) {
-	if len(conditions) == 0 {
+func toPredicate(conditions ...model.Condition) (SendSmsRequestPredicate, error) {
+	if conditions == nil || len(conditions) == 0 {
 		return alwaysTrue, nil
 	}
 	var predicates []SendSmsRequestPredicate
@@ -92,7 +92,7 @@ func newLogicalPredicate(def model.Predicate) (SendSmsRequestPredicate, error) {
 		return nil, newBadDefinitionError("Logical predicate cannot have length constraints")
 	}
 	if def.Pattern != nil || def.EqualTo != nil {
-		return nil, newBadDefinitionError("Logical predicate cannot have pattern or equal to constraints")
+		return nil, newBadDefinitionError("Logical predicate cannot have pattern or equal destination constraints")
 	}
 	if def.AllMatch != nil && def.AnyMatch != nil {
 		return nil, newBadDefinitionError("Logical predicate cannot have both all match and any match")

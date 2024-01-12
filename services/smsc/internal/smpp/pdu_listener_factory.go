@@ -64,6 +64,8 @@ func (instance *PduListenerFactory) onPduEvent(definition model.Smpp, event pdu.
 	zap.L().Info("Pdu Event received",
 		zap.String(SmscIdAttribute, definition.Id),
 		zap.String(SmscAliasAttribute, definition.Alias),
+		zap.String(pduHeaderIdAttribute, event.Header().ID.String()),
+		zap.Float64(pduHeaderStatusAttribute, float64(event.Header().Status)),
 	)
 	attrs := []attribute.KeyValue{
 		attribute.String(pduHeaderIdAttribute, event.Header().ID.String()),
@@ -183,8 +185,8 @@ func (instance *PduListenerFactory) onDeliverySM(definition model.Smpp, event pd
 	case 0x04:
 		zap.L().Info("Pdu event identified recognized as SmsDeliveryRequest",
 			zap.String(SmscIdAttribute, definition.Id),
+			zap.Uint8(pduFieldEsmClassAttribute, esmClass),
 			zap.String(SmscAliasAttribute, definition.Alias),
-			zap.String(pduFieldEsmClassAttribute, "0x04"),
 			zap.String(pduHeaderIdAttribute, event.Header().ID.String()),
 		)
 		zap.L().Debug("PduEvent converted into SmsDeliveryRequest",

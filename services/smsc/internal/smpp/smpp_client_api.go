@@ -18,7 +18,6 @@ const (
 type TransmitterConn interface {
 	smpp.ClientConn
 	Submit(sm *smpp.ShortMessage) (*smpp.ShortMessage, error)
-	SubmitLongMsg(sm *smpp.ShortMessage) ([]smpp.ShortMessage, error)
 }
 
 type Client interface {
@@ -26,6 +25,7 @@ type Client interface {
 	Bind()
 	GetId() string
 	GetType() string
+	IsTrackingDelivery() bool
 	SendMessage(destination, message string) (SendMessageResponse, error)
 }
 

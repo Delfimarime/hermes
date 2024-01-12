@@ -24,6 +24,10 @@ type SimpleConnector struct {
 	bindErrorCountMetric        metric.Float64Counter // number_of_bindings_that_failed
 }
 
+func (instance *SimpleConnector) IsTrackingDelivery() bool {
+	return instance.client.IsTrackingDelivery()
+}
+
 func (instance *SimpleConnector) GetState() State {
 	return instance.state
 }
@@ -61,7 +65,6 @@ func (instance *SimpleConnector) SendMessage(destination, message string) (SendM
 			instance.GetId()), zap.String(SmscIdAttribute, instance.GetId()),
 			zap.String(SmscAliasAttribute, instance.GetAlias()),
 			zap.String(smscStateAttribute, instance.GetState().string()),
-			zap.String(smsIdAttribute, resp.Id),
 			zap.String(smsDestinationAttribute, destination),
 		)
 	}

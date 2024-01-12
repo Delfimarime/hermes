@@ -48,7 +48,7 @@ func TestSendSms(t *testing.T) {
 			)
 		}))
 		defer app.RequireStart().RequireStop()
-		idFromResponse, err := strconv.Atoi(resp.Id)
+		idFromResponse, err := strconv.Atoi(resp.Parts[0].Id)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -104,7 +104,6 @@ func TestListenToMessage(t *testing.T) {
 				)
 			}))
 		defer app.RequireStart().RequireStop()
-
 		require.NotNil(t, listener.ReceivedSmsRequests, "Listener didn't catch any message")
 		require.Len(t, listener.ReceivedSmsRequests, 1, "Listener received messages size must be 1")
 		require.NotEmptyf(t, listener.ReceivedSmsRequests[0].Id, "Id mustn't be empty")
@@ -157,7 +156,7 @@ func TestSendSmsAndCatchDeliveryReport(t *testing.T) {
 		require.NotNil(t, listener.SmsDeliveryRequests, "Listener didn't catch any delivery report")
 		require.Len(t, listener.SmsDeliveryRequests, 1, "Listener delivery reports size must be 1")
 		require.NotEmptyf(t, listener.SmsDeliveryRequests[0].Id, "Id mustn't be empty")
-		require.Equal(t, resp.Id, listener.SmsDeliveryRequests[0].Id, "Resp.Id and Delivery.Id must match")
+		require.Equal(t, resp.Parts[0].Id, listener.SmsDeliveryRequests[0].Id, "Resp.Id and Delivery.Id must match")
 		//		require.Equal(t, listener.SmsDeliveryRequests[0].SmscId, receiverId, "Receiving SMSC.id must match")
 		require.Equal(t, listener.SmsDeliveryRequests[0].Status, 0, "From mustn't be empty")
 	})

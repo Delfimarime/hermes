@@ -200,7 +200,7 @@ func TestToPredicate_with_subject_part_of_sms_min_and_max_length(t *testing.T) {
 		Predicate: model.Predicate{
 			MinimumLength: common.ToIntPointer(1),
 			MaximumLength: common.ToIntPointer(2),
-			Subject:       common.ToStrPointer(string(PartsOfSms)),
+			Subject:       common.ToStrPointer(string(Content)),
 		},
 	})
 	if err != nil {

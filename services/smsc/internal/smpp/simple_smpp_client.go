@@ -8,6 +8,10 @@ import (
 	"github.com/fiorix/go-smpp/smpp/pdu/pdutext"
 )
 
+const (
+	smppSingleSmsSize = 133
+)
+
 type ClientConnEventListener func(ClientConnEvent)
 
 type SimpleClient struct {
@@ -41,25 +45,42 @@ func (instance *SimpleClient) Bind() {
 	}(instance.bindingChannel)
 }
 
+func (instance *SimpleClient) IsTrackingDelivery() bool {
+	return instance.awaitDeliveryReport
+}
+
 func (instance *SimpleClient) SendMessage(destination, message string) (SendMessageResponse, error) {
 	if instance.smppType != model.TransceiverType && instance.smppType != model.TransmitterType {
 		return SendMessageResponse{}, errors.New("operation not supported")
 	}
 	deliverySetting := pdufield.NoDeliveryReceipt
-	if instance.awaitDeliveryReport {
+	if instance.IsTrackingDelivery() {
 		deliverySetting = pdufield.FinalDeliveryReceipt
 	}
-	sm, err := instance.smppConn.(TransmitterConn).Submit(&smpp.ShortMessage{
-		Dst:      destination,
-		Register: deliverySetting,
-		Text:     pdutext.Raw(message),
-	})
-	if err != nil {
-		return SendMessageResponse{}, err
+	var err error
+	resp := SendMessageResponse{
+		Parts: make([]SendMessagePart, 0),
 	}
-	return SendMessageResponse{
-		Id: sm.Resp().Fields()[pdufield.MessageID].String(),
-	}, err
+	numberOfParts := int((len(message)-1)/smppSingleSmsSize) + 1
+	for i := 0; i < numberOfParts; i++ {
+		content := ""
+		if i == numberOfParts-1 {
+			content = message[i*smppSingleSmsSize:]
+		} else {
+			content = message[i*smppSingleSmsSize : (i+1)*smppSingleSmsSize]
+		}
+		sm, prob := instance.smppConn.(TransmitterConn).Submit(&smpp.ShortMessage{
+			Dst:      destination,
+			Register: deliverySetting,
+			Text:     pdutext.Raw(content),
+		})
+		if prob != nil {
+			err = prob
+			break
+		}
+		resp.Parts = append(resp.Parts, SendMessagePart{Id: sm.Resp().Fields()[pdufield.MessageID].String()})
+	}
+	return resp, err
 }
 
 func (instance *SimpleClient) observeClientConn(ch <-chan smpp.ConnStatus) {

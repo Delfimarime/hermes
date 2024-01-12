@@ -16,7 +16,7 @@ const (
 	Destination Subject = "to"
 	Tag         Subject = "tag"
 	Source      Subject = "from"
-	PartsOfSms  Subject = "messages"
+	Content     Subject = "content"
 )
 
 const (
@@ -26,7 +26,7 @@ const (
 var predicateFactories = map[Subject]SendSmsRequestPredicateFactory{
 	Tag:         newTagPredicate,
 	Source:      newSourcePredicate,
-	PartsOfSms:  newPartsOfSmsPredicate,
+	Content:     newContentPredicate,
 	Destination: newDestinationPredicate,
 }
 
@@ -63,15 +63,10 @@ func newDestinationPredicate(def model.Predicate) (SendSmsRequestPredicate, erro
 	})
 }
 
-func newPartsOfSmsPredicate(def model.Predicate) (SendSmsRequestPredicate, error) {
-	return func(request asyncapi.SendSmsRequest) bool {
-		return isOfRange(def.MinimumLength, def.MaximumLength, func() int {
-			if request.Messages == nil {
-				return -1
-			}
-			return len(request.Messages)
-		})
-	}, nil
+func newContentPredicate(def model.Predicate) (SendSmsRequestPredicate, error) {
+	return newTextPredicate(def, func(req asyncapi.SendSmsRequest) string {
+		return req.Content
+	})
 }
 
 func newSourcePredicate(def model.Predicate) (SendSmsRequestPredicate, error) {

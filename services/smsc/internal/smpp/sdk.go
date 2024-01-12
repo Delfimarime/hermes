@@ -24,10 +24,15 @@ type Connector interface {
 	GetType() string
 	GetAlias() string
 	GetState() State
+	IsTrackingDelivery() bool
 	SendMessage(destination, message string) (SendMessageResponse, error)
 }
 
 type SendMessageResponse struct {
+	Parts []SendMessagePart
+}
+
+type SendMessagePart struct {
 	Id string
 }
 

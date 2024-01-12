@@ -25,8 +25,7 @@ type SmppSendSmsRequestListener struct {
 func (instance *SmppSendSmsRequestListener) ListenTo(req asyncapi.SendSmsRequest) (asyncapi.SendSmsResponse, error) {
 	zap.L().Info("Listening to asyncapi.SendSmsRequest", zap.String("id", req.Id))
 	sendSmsResponse := asyncapi.SendSmsResponse{
-		Id:       req.Id,
-		Messages: make([]asyncapi.SendSmsResponsePart, 0),
+		Id: req.Id,
 	}
 	zap.L().Debug("Retrieving []smpp.Connector  in order to process asyncapi.SendSmsRequest",
 		zap.String("id", req.Id))
@@ -41,7 +40,6 @@ func (instance *SmppSendSmsRequestListener) ListenTo(req asyncapi.SendSmsRequest
 				each.GetId()), zap.String("id", req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 				zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 			)
-			//TODO TRIGGER CREATE PREDICATE
 			continue
 		}
 		zap.L().Debug(fmt.Sprintf("Checking if smpp.Connector[id=%s] can sendMessage",
@@ -60,25 +58,27 @@ func (instance *SmppSendSmsRequestListener) ListenTo(req asyncapi.SendSmsRequest
 			each.GetId()), zap.String("id", req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 			zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 		)
-		for _, part := range req.Messages {
-			sendMessageResponse, err := each.SendMessage(req.To, part.Content)
-			if err != nil {
-				var unavailableConnectorError *smpp.UnavailableConnectorError
-				if errors.As(err, &unavailableConnectorError) {
-					zap.L().Warn(fmt.Sprintf("Cannot sendMessage on smpp.Connector[id=%s] since it's not available",
-						each.GetId()), zap.String("id", req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
-						zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
-						zap.Error(err),
-					)
-					continue
-				}
-				return asyncapi.SendSmsResponse{}, err
+		sendMessageResponse, err := each.SendMessage(req.To, req.Content)
+		if err != nil {
+			var unavailableConnectorError *smpp.UnavailableConnectorError
+			if errors.As(err, &unavailableConnectorError) {
+				zap.L().Warn(fmt.Sprintf("Cannot sendMessage on smpp.Connector[id=%s] since it's not available",
+					each.GetId()), zap.String("id", req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
+					zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
+					zap.Error(err),
+				)
+				continue
 			}
-			sendSmsResponse.Messages = append(sendSmsResponse.Messages, asyncapi.SendSmsResponsePart{
-				Id:     part.Id,
-				SmscId: each.GetId(),
-				SmppId: sendMessageResponse.Id,
-			})
+			return asyncapi.SendSmsResponse{}, err
+		}
+		sendSmsResponse.Type = asyncapi.ShortSendSmsResponseType
+		sendSmsResponse.Delivery = asyncapi.NotTrackingDeliveryStrategy
+		sendSmsResponse.Smsc = asyncapi.ObjectId{Id: each.GetId()}
+		if len(sendMessageResponse.Parts) > 1 {
+			sendSmsResponse.Type = asyncapi.LongSendSmsResponseType
+		}
+		if each.IsTrackingDelivery() {
+			sendSmsResponse.Delivery = asyncapi.TrackingDeliveryStrategy
 		}
 	}
 	return sendSmsResponse, nil

@@ -13,10 +13,14 @@ type SendSmsRequestPredicate func(request asyncapi.SendSmsRequest) bool
 type SendSmsRequestPredicateFactory func(model.Predicate) (SendSmsRequestPredicate, error)
 
 const (
-	Destination Subject = "destination"
+	Destination Subject = "to"
 	Tag         Subject = "tag"
 	Source      Subject = "from"
 	PartsOfSms  Subject = "messages"
+)
+
+const (
+	UnsupportedSubjectErrorf = "subject=%s isn't supported"
 )
 
 var predicateFactories = map[Subject]SendSmsRequestPredicateFactory{
@@ -48,7 +52,7 @@ func createPredicateFromDefinition(definition model.Predicate) (SendSmsRequestPr
 	subject := Subject(*definition.Subject)
 	predicate, hasValue := predicateFactories[subject]
 	if !hasValue {
-		return nil, fmt.Errorf("subject=%s isn't supported", subject)
+		return nil, fmt.Errorf(UnsupportedSubjectErrorf, subject)
 	}
 	return predicate(definition)
 }

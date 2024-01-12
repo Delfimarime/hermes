@@ -1,12 +1,22 @@
 package inbound
 
 import (
+	"fmt"
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
 	"github.com/delfimarime/hermes/services/smsc/pkg/asyncapi"
 	"github.com/delfimarime/hermes/services/smsc/pkg/common"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
+
+func TestToPredicate_with_unsupported_subject(t *testing.T) {
+	subject := "any"
+	_, err := toPredicate(model.Condition{
+		Predicate: model.Predicate{Subject: common.ToStrPointer(subject)},
+	})
+	require.NotNil(t, err, "expected an error but got none")
+	require.Error(t, err, fmt.Sprintf(UnsupportedSubjectErrorf, subject))
+}
 
 func TestToPredicate_with_subject_destination_equal_to(t *testing.T) {
 	predicate, err := toPredicate(model.Condition{

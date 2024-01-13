@@ -274,7 +274,7 @@ func NewApp(t *testing.T, cfg TestAppConfig, fxOptions ...fx.Option) *fxtest.App
 		fx.Provide(func() SmsEventListener {
 			return smsListener
 		}),
-		fx.Provide(func() sdk.Repository {
+		fx.Provide(func() sdk.SmppRepository {
 			smppList := []model.Smpp{
 				{
 					Id:          cfg.SenderId,

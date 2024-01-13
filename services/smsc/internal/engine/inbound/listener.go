@@ -3,27 +3,53 @@ package inbound
 import (
 	"errors"
 	"fmt"
+	"github.com/delfimarime/hermes/services/smsc/internal/model"
 	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
 	"github.com/delfimarime/hermes/services/smsc/internal/smpp"
 	"github.com/delfimarime/hermes/services/smsc/pkg/asyncapi"
 	"go.uber.org/zap"
 	"sync"
+	"time"
 )
 
 const (
 	conditionsRetrievedFromRepositoryF = "Creating inbound.SendSmsRequestPredicate for smpp.Connector" +
-		" from %d conditions retrieved from Repository"
+		" from %d conditions retrieved from SmppRepository"
 )
 
 type SmppSendSmsRequestListener struct {
-	mutex      sync.Mutex
-	repository sdk.Repository
-	manager    smpp.ConnectorManager
-	cache      map[string]SendSmsRequestPredicate
+	mutex          sync.Mutex
+	smsRepository  sdk.SmsRepository
+	smppRepository sdk.SmppRepository
+	manager        smpp.ConnectorManager
+	cache          map[string]SendSmsRequestPredicate
 }
 
 func (instance *SmppSendSmsRequestListener) ListenTo(req asyncapi.SendSmsRequest) (asyncapi.SendSmsResponse, error) {
 	zap.L().Info("Listening to asyncapi.SendSmsRequest", zap.String("id", req.Id))
+	fromDb, err := instance.smsRepository.FindById(req.Id)
+	if err != nil {
+		return asyncapi.SendSmsResponse{}, err
+	}
+	if fromDb == nil {
+		fromDb = &model.Sms{
+			Id:             "",
+			To:             "",
+			Type:           "",
+			From:           "",
+			Tags:           nil,
+			ListenedAt:     time.Time{},
+			TrackDelivery:  false,
+			NumberOfParts:  0,
+			SentParts:      nil,
+			MaxSizePerPart: 0,
+			Smpp:           asyncapi.ObjectId{},
+		}
+	}
+	return instance.doListenTo(req)
+}
+
+func (instance *SmppSendSmsRequestListener) doListenTo(req asyncapi.SendSmsRequest) (asyncapi.SendSmsResponse, error) {
 	sendSmsResponse := asyncapi.SendSmsResponse{
 		Id: req.Id,
 	}
@@ -106,7 +132,7 @@ func (instance *SmppSendSmsRequestListener) AfterPropertiesSet() error {
 			zap.String(smpp.SmscTypeAttribute, each.GetType()),
 			zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 		)
-		seq, err := instance.repository.GetConditionsFrom(each.GetId())
+		seq, err := instance.smppRepository.GetConditionsFrom(each.GetId())
 		if err != nil {
 			zap.L().Warn("Cannot setup inbound.SendSmsRequestPredicate for smpp.Connector",
 				zap.String(smpp.SmscIdAttribute, each.GetId()),

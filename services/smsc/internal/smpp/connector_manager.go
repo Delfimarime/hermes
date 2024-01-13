@@ -15,7 +15,7 @@ import (
 
 type SimpleConnectorManager struct {
 	mutex              sync.Mutex
-	repository         sdk.Repository
+	repository         sdk.SmppRepository
 	connectors         []Connector
 	pduListenerFactory *PduListenerFactory
 	configuration      config.Configuration
@@ -34,12 +34,12 @@ func (instance *SimpleConnectorManager) GetById(id string) Connector {
 func (instance *SimpleConnectorManager) AfterPropertiesSet() error {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
-	zap.L().Debug("Retrieving smsc configuration from Repository")
+	zap.L().Debug("Retrieving smsc configuration from SmppRepository")
 	seq, err := instance.repository.FindAll()
 	if err != nil {
 		return err
 	}
-	zap.L().Info(fmt.Sprintf("%d smsc's retrieved from Repository", len(seq)))
+	zap.L().Info(fmt.Sprintf("%d smsc's retrieved from SmppRepository", len(seq)))
 	instance.setConnectors(seq...)
 	go func() {
 		instance.refresh()
@@ -263,7 +263,7 @@ func (instance *SimpleConnectorManager) bindOrRefresh(c *SimpleConnector, e *Cli
 				zap.Error(err),
 			)
 		}
-		zap.L().Debug(fmt.Sprintf("Retriving smpp.connector[id=%s] configuration from Repository", c.GetId()),
+		zap.L().Debug(fmt.Sprintf("Retriving smpp.connector[id=%s] configuration from SmppRepository", c.GetId()),
 			zap.String(SmscIdAttribute, c.GetId()), zap.String(SmscAliasAttribute, c.GetAlias()),
 			zap.String(smscStateAttribute, c.GetState().string()),
 		)

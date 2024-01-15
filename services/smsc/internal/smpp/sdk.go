@@ -29,10 +29,6 @@ type Connector interface {
 }
 
 type SendMessageResponse struct {
-	Parts []SendMessagePart
-}
-
-type SendMessagePart struct {
 	Id string
 }
 

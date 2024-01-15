@@ -10,7 +10,7 @@ const (
 	SmscTypeAttribute  = "smsc_type"
 	smscStateAttribute = "smsc_state"
 
-	smsIdAttribute          = "sms_id"
+	SmsIdAttribute          = "sms_id"
 	smsDestinationAttribute = "sms_message"
 
 	errorAttribute            = "caused-by"

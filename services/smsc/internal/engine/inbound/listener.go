@@ -13,9 +13,18 @@ import (
 )
 
 const (
+	requestIdAttribute = "send_sms_request_id"
+)
+
+const (
 	conditionsRetrievedFromRepositoryF = "Creating inbound.SendSmsRequestPredicate for smpp.Connector" +
 		" from %d conditions retrieved from SmppRepository"
 )
+
+type SendSmsResponse struct {
+	Id string
+	asyncapi.SendSmsResponse
+}
 
 type SmppSendSmsRequestListener struct {
 	mutex          sync.Mutex
@@ -26,62 +35,86 @@ type SmppSendSmsRequestListener struct {
 }
 
 func (instance *SmppSendSmsRequestListener) ListenTo(req asyncapi.SendSmsRequest) (asyncapi.SendSmsResponse, error) {
-	zap.L().Info("Listening to asyncapi.SendSmsRequest", zap.String("id", req.Id))
+	instant := time.Now()
+	zap.L().Info("Listening to asyncapi.SendSmsRequest", zap.String(requestIdAttribute, req.Id))
+	zap.L().Debug("Fetching model.Sms from Repository", zap.String(requestIdAttribute, req.Id))
 	fromDb, err := instance.smsRepository.FindById(req.Id)
+	if err != nil {
+		zap.L().Error("Cannot fetch model.Sms from Repository", zap.String(requestIdAttribute, req.Id), zap.Error(err))
+		return asyncapi.SendSmsResponse{}, err
+	}
+	if fromDb != nil {
+		zap.L().Debug("Retrieved model.Sms from Repository. No action will be taken",
+			zap.String(requestIdAttribute, req.Id))
+		deliveryStrategy := asyncapi.NotTrackingDeliveryStrategy
+		if fromDb.TrackDelivery {
+			deliveryStrategy = asyncapi.TrackingDeliveryStrategy
+		}
+		return asyncapi.SendSmsResponse{
+			Id:       fromDb.Id,
+			Smsc:     *fromDb.Smpp,
+			Delivery: deliveryStrategy,
+		}, nil
+	}
+	resp, err := instance.doListenTo(req)
+	if err != nil {
+		zap.L().Error("Cannot consume asyncapi.SendSmsRequest due to an error",
+			zap.String(requestIdAttribute, req.Id),
+			zap.Error(err))
+		return asyncapi.SendSmsResponse{}, err
+	}
+	zap.L().Debug("Persisting model.Sms for asyncapi.SendSmsRequest",
+		zap.String(requestIdAttribute, req.Id),
+		zap.String(smpp.SmsIdAttribute, resp.Id),
+		zap.String(smpp.SmscIdAttribute, resp.Smsc.Id),
+	)
+	err = instance.smsRepository.Save(&model.Sms{
+		Id:         req.Id,
+		TrackId:    resp.Id,
+		ListenedAt: instant,
+		Smpp:       &resp.Smsc,
+	})
 	if err != nil {
 		return asyncapi.SendSmsResponse{}, err
 	}
-	if fromDb == nil {
-		fromDb = &model.Sms{
-			Id:             "",
-			To:             "",
-			Type:           "",
-			From:           "",
-			Tags:           nil,
-			ListenedAt:     time.Time{},
-			TrackDelivery:  false,
-			NumberOfParts:  0,
-			SentParts:      nil,
-			MaxSizePerPart: 0,
-			Smpp:           asyncapi.ObjectId{},
-		}
-	}
-	return instance.doListenTo(req)
+	return resp.SendSmsResponse, nil
 }
 
-func (instance *SmppSendSmsRequestListener) doListenTo(req asyncapi.SendSmsRequest) (asyncapi.SendSmsResponse, error) {
-	sendSmsResponse := asyncapi.SendSmsResponse{
-		Id: req.Id,
+func (instance *SmppSendSmsRequestListener) doListenTo(req asyncapi.SendSmsRequest) (SendSmsResponse, error) {
+	sendSmsResponse := SendSmsResponse{
+		SendSmsResponse: asyncapi.SendSmsResponse{
+			Id: req.Id,
+		},
 	}
 	zap.L().Debug("Retrieving []smpp.Connector  in order to process asyncapi.SendSmsRequest",
-		zap.String("id", req.Id))
+		zap.String(requestIdAttribute, req.Id))
 	for _, each := range instance.manager.GetList() {
 		zap.L().Debug(fmt.Sprintf("Fetching inbound.SendSmsRequestPredicate smpp.Connector[id=%s]",
-			each.GetId()), zap.String("id", req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
+			each.GetId()), zap.String(requestIdAttribute, req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 			zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 		)
 		predicate, hasValue := instance.cache[each.GetId()]
 		if !hasValue {
 			zap.L().Warn(fmt.Sprintf("Cannot fetch inbound.SendSmsRequestPredicate smpp.Connector[id=%s]",
-				each.GetId()), zap.String("id", req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
+				each.GetId()), zap.String(requestIdAttribute, req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 				zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 			)
 			continue
 		}
 		zap.L().Debug(fmt.Sprintf("Checking if smpp.Connector[id=%s] can sendMessage",
-			each.GetId()), zap.String("id", req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
+			each.GetId()), zap.String(requestIdAttribute, req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 			zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 		)
 		isCapableOfSendSms := predicate(req)
 		if !isCapableOfSendSms {
 			zap.L().Debug(fmt.Sprintf("smpp.Connector[id=%s] isn't capable of sendMessage",
-				each.GetId()), zap.String("id", req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
+				each.GetId()), zap.String(requestIdAttribute, req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 				zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 			)
 			continue
 		}
 		zap.L().Debug(fmt.Sprintf("Starting sendMessage on smpp.Connector[id=%s]",
-			each.GetId()), zap.String("id", req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
+			each.GetId()), zap.String(requestIdAttribute, req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 			zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 		)
 		sendMessageResponse, err := each.SendMessage(req.To, req.Content)
@@ -89,20 +122,17 @@ func (instance *SmppSendSmsRequestListener) doListenTo(req asyncapi.SendSmsReque
 			var unavailableConnectorError *smpp.UnavailableConnectorError
 			if errors.As(err, &unavailableConnectorError) {
 				zap.L().Warn(fmt.Sprintf("Cannot sendMessage on smpp.Connector[id=%s] since it's not available",
-					each.GetId()), zap.String("id", req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
+					each.GetId()), zap.String(requestIdAttribute, req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 					zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 					zap.Error(err),
 				)
 				continue
 			}
-			return asyncapi.SendSmsResponse{}, err
+			return SendSmsResponse{}, err
 		}
-		sendSmsResponse.Type = asyncapi.ShortSendSmsResponseType
+		sendSmsResponse.Id = sendMessageResponse.Id
 		sendSmsResponse.Delivery = asyncapi.NotTrackingDeliveryStrategy
 		sendSmsResponse.Smsc = asyncapi.ObjectId{Id: each.GetId()}
-		if len(sendMessageResponse.Parts) > 1 {
-			sendSmsResponse.Type = asyncapi.LongSendSmsResponseType
-		}
 		if each.IsTrackingDelivery() {
 			sendSmsResponse.Delivery = asyncapi.TrackingDeliveryStrategy
 		}

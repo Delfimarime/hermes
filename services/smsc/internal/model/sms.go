@@ -6,20 +6,9 @@ import (
 )
 
 type Sms struct {
-	Id             string
-	To             string
-	Type           string
-	From           string
-	Tags           []string
-	ListenedAt     time.Time
-	TrackDelivery  bool
-	NumberOfParts  int
-	SentParts      []SmsPart
-	MaxSizePerPart int
-	Smpp           asyncapi.ObjectId
-}
-
-type SmsPart struct {
-	Id     string
-	Status string
+	TrackDelivery bool
+	Id            string
+	TrackId       string
+	ListenedAt    time.Time
+	Smpp          *asyncapi.ObjectId
 }

@@ -8,11 +8,6 @@ const (
 	NotTrackingDeliveryStrategy DeliveryStrategy = "NOT_TRACKING"
 )
 
-const (
-	LongSendSmsResponseType  SendSmsResponseType = "LONG"
-	ShortSendSmsResponseType SendSmsResponseType = "SHORT"
-)
-
 type SendSmsRequest struct {
 	Id      string   `json:"id"`
 	To      string   `json:"to"`
@@ -22,10 +17,9 @@ type SendSmsRequest struct {
 }
 
 type SendSmsResponse struct {
-	Id       string              `json:"id"`
-	Type     SendSmsResponseType `json:"type"`
-	Delivery DeliveryStrategy    `json:"delivery"`
-	Smsc     ObjectId            `json:"send_through"`
+	Id       string           `json:"id"`
+	Delivery DeliveryStrategy `json:"delivery"`
+	Smsc     ObjectId         `json:"send_through"`
 }
 
 type ObjectId struct {

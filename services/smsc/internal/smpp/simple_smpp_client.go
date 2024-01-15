@@ -57,30 +57,15 @@ func (instance *SimpleClient) SendMessage(destination, message string) (SendMess
 	if instance.IsTrackingDelivery() {
 		deliverySetting = pdufield.FinalDeliveryReceipt
 	}
-	var err error
-	resp := SendMessageResponse{
-		Parts: make([]SendMessagePart, 0),
+	sm, err := instance.smppConn.(TransmitterConn).Submit(&smpp.ShortMessage{
+		Dst:      destination,
+		Register: deliverySetting,
+		Text:     pdutext.Raw(message),
+	})
+	if err != nil {
+		return SendMessageResponse{}, err
 	}
-	numberOfParts := int((len(message)-1)/smppSingleSmsSize) + 1
-	for i := 0; i < numberOfParts; i++ {
-		content := ""
-		if i == numberOfParts-1 {
-			content = message[i*smppSingleSmsSize:]
-		} else {
-			content = message[i*smppSingleSmsSize : (i+1)*smppSingleSmsSize]
-		}
-		sm, prob := instance.smppConn.(TransmitterConn).Submit(&smpp.ShortMessage{
-			Dst:      destination,
-			Register: deliverySetting,
-			Text:     pdutext.Raw(content),
-		})
-		if prob != nil {
-			err = prob
-			break
-		}
-		resp.Parts = append(resp.Parts, SendMessagePart{Id: sm.Resp().Fields()[pdufield.MessageID].String()})
-	}
-	return resp, err
+	return SendMessageResponse{Id: sm.Resp().Fields()[pdufield.MessageID].String()}, err
 }
 
 func (instance *SimpleClient) observeClientConn(ch <-chan smpp.ConnStatus) {

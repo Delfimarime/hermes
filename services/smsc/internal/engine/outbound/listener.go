@@ -1,4 +1,4 @@
-package inbound
+package outbound
 
 import (
 	"errors"
@@ -17,7 +17,7 @@ const (
 )
 
 const (
-	conditionsRetrievedFromRepositoryF = "Creating inbound.SendSmsRequestPredicate for smpp.Connector" +
+	conditionsRetrievedFromRepositoryF = "Creating outbound.SendSmsRequestPredicate for smpp.Connector" +
 		" from %d conditions retrieved from SmppRepository"
 )
 
@@ -89,13 +89,13 @@ func (instance *SmppSendSmsRequestListener) doListenTo(req asyncapi.SendSmsReque
 	zap.L().Debug("Retrieving []smpp.Connector  in order to process asyncapi.SendSmsRequest",
 		zap.String(requestIdAttribute, req.Id))
 	for _, each := range instance.manager.GetList() {
-		zap.L().Debug(fmt.Sprintf("Fetching inbound.SendSmsRequestPredicate smpp.Connector[id=%s]",
+		zap.L().Debug(fmt.Sprintf("Fetching outbound.SendSmsRequestPredicate smpp.Connector[id=%s]",
 			each.GetId()), zap.String(requestIdAttribute, req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 			zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 		)
 		predicate, hasValue := instance.cache[each.GetId()]
 		if !hasValue {
-			zap.L().Warn(fmt.Sprintf("Cannot fetch inbound.SendSmsRequestPredicate smpp.Connector[id=%s]",
+			zap.L().Warn(fmt.Sprintf("Cannot fetch outbound.SendSmsRequestPredicate smpp.Connector[id=%s]",
 				each.GetId()), zap.String(requestIdAttribute, req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 				zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 			)
@@ -155,16 +155,16 @@ func (instance *SmppSendSmsRequestListener) AfterPropertiesSet() error {
 	if instance.cache == nil {
 		instance.cache = make(map[string]SendSmsRequestPredicate)
 	}
-	zap.L().Info("Setting up inbound.SendSmsRequestListener")
+	zap.L().Info("Setting up outbound.SendSmsRequestListener")
 	for _, each := range instance.manager.GetList() {
-		zap.L().Debug("Setting up inbound.SendSmsRequestPredicate for smpp.Connector",
+		zap.L().Debug("Setting up outbound.SendSmsRequestPredicate for smpp.Connector",
 			zap.String(smpp.SmscIdAttribute, each.GetId()),
 			zap.String(smpp.SmscTypeAttribute, each.GetType()),
 			zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 		)
 		seq, err := instance.smppRepository.GetConditionsFrom(each.GetId())
 		if err != nil {
-			zap.L().Warn("Cannot setup inbound.SendSmsRequestPredicate for smpp.Connector",
+			zap.L().Warn("Cannot setup outbound.SendSmsRequestPredicate for smpp.Connector",
 				zap.String(smpp.SmscIdAttribute, each.GetId()),
 				zap.String(smpp.SmscTypeAttribute, each.GetType()),
 				zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
@@ -180,7 +180,7 @@ func (instance *SmppSendSmsRequestListener) AfterPropertiesSet() error {
 		)
 		predicate, err := toPredicate(seq...)
 		if err != nil {
-			zap.L().Warn("Cannot setup inbound.SendSmsRequestPredicate for smpp.Connector",
+			zap.L().Warn("Cannot setup outbound.SendSmsRequestPredicate for smpp.Connector",
 				zap.String(smpp.SmscIdAttribute, each.GetId()),
 				zap.String(smpp.SmscTypeAttribute, each.GetType()),
 				zap.String(smpp.SmscAliasAttribute, each.GetAlias()),

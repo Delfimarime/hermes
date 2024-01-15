@@ -1,4 +1,4 @@
-package inbound
+package outbound
 
 import (
 	"github.com/delfimarime/hermes/services/smsc/internal/smpp"

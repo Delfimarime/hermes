@@ -52,7 +52,7 @@ func (instance *SmppSendSmsRequestListener) ListenTo(req asyncapi.SendSmsRequest
 		}
 		return asyncapi.SendSmsResponse{
 			Id:       fromDb.Id,
-			Smsc:     *fromDb.Smpp,
+			Smsc:     fromDb.Smpp,
 			Delivery: deliveryStrategy,
 		}, nil
 	}
@@ -72,7 +72,7 @@ func (instance *SmppSendSmsRequestListener) ListenTo(req asyncapi.SendSmsRequest
 		Id:         req.Id,
 		TrackId:    resp.Id,
 		ListenedAt: instant,
-		Smpp:       &resp.Smsc,
+		Smpp:       resp.Smsc,
 	})
 	if err != nil {
 		return asyncapi.SendSmsResponse{}, err
@@ -132,11 +132,20 @@ func (instance *SmppSendSmsRequestListener) doListenTo(req asyncapi.SendSmsReque
 		}
 		sendSmsResponse.Id = sendMessageResponse.Id
 		sendSmsResponse.Delivery = asyncapi.NotTrackingDeliveryStrategy
-		sendSmsResponse.Smsc = asyncapi.ObjectId{Id: each.GetId()}
+		sendSmsResponse.Smsc = &asyncapi.ObjectId{Id: each.GetId()}
 		if each.IsTrackingDelivery() {
 			sendSmsResponse.Delivery = asyncapi.TrackingDeliveryStrategy
 		}
 	}
+
+	if sendSmsResponse.SendSmsResponse.Smsc == nil {
+		sendSmsResponse.SendSmsResponse.Problem = &asyncapi.Problem{
+			Title:  "Cannot send async.SendSmsRequest",
+			Type:   "/smsc/sendSmsRequest/unprocessable-entity",
+			Detail: "Couldn't determine smpp.Connector capable of sending asyncapi.SendSmsRequest",
+		}
+	}
+
 	return sendSmsResponse, nil
 }
 

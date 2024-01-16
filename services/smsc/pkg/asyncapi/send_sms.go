@@ -18,8 +18,15 @@ type SendSmsRequest struct {
 
 type SendSmsResponse struct {
 	Id       string           `json:"id"`
+	Problem  *Problem         `json:"problem"`
 	Delivery DeliveryStrategy `json:"delivery"`
-	Smsc     ObjectId         `json:"send_through"`
+	Smsc     *ObjectId        `json:"send_through"`
+}
+
+type Problem struct {
+	Title  string `json:"title"`
+	Type   string `json:"type"`
+	Detail string `json:"detail"`
 }
 
 type ObjectId struct {

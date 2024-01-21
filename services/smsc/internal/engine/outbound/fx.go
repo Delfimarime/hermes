@@ -14,17 +14,17 @@ func GetUberFxModule() fx.Option {
 				cm smpp.ConnectorManager,
 				smsRepository sdk.SmsRepository,
 				smppRepository sdk.SmppRepository,
-			) SendSmsRequestListener {
+			) SendSmsRequestHandler {
 				return &SmppSendSmsRequestListener{
 					manager:        cm,
 					smsRepository:  smsRepository,
 					smppRepository: smppRepository,
-					cache:          make(map[string]SendSmsRequestPredicate),
+					predicate:      make(map[string]SendSmsRequestPredicate),
 				}
 			},
 		),
 		fx.Invoke(
-			func(lifecycle fx.Lifecycle, s SendSmsRequestListener) {
+			func(lifecycle fx.Lifecycle, s SendSmsRequestHandler) {
 				lifecycle.Append(
 					fx.Hook{
 						OnStop: func(ctx goContext.Context) error {

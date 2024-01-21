@@ -1,5 +1,7 @@
 package asyncapi
 
+import "time"
+
 type DeliveryStrategy string
 type SendSmsResponseType string
 
@@ -17,10 +19,11 @@ type SendSmsRequest struct {
 }
 
 type SendSmsResponse struct {
-	Id       string           `json:"id"`
-	Problem  *Problem         `json:"problem"`
-	Delivery DeliveryStrategy `json:"delivery"`
-	Smsc     *ObjectId        `json:"send_through"`
+	Id         string           `json:"id"`
+	Problem    *Problem         `json:"problem"`
+	Delivery   DeliveryStrategy `json:"delivery"`
+	CanceledAt *time.Time       `json:"canceled_at"`
+	Smsc       *ObjectId        `json:"send_through"`
 }
 
 type Problem struct {

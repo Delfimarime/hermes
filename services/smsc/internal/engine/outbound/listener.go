@@ -31,21 +31,44 @@ type SmppSendSmsRequestListener struct {
 	smsRepository  sdk.SmsRepository
 	smppRepository sdk.SmppRepository
 	manager        smpp.ConnectorManager
-	cache          map[string]SendSmsRequestPredicate
+	predicate      map[string]SendSmsRequestPredicate
 }
 
-func (instance *SmppSendSmsRequestListener) ListenTo(req asyncapi.SendSmsRequest) (asyncapi.SendSmsResponse, error) {
+func (instance *SmppSendSmsRequestListener) Accept(req asyncapi.SendSmsRequest) (asyncapi.SendSmsResponse, error) {
 	instant := time.Now()
 	zap.L().Info("Listening to asyncapi.SendSmsRequest", zap.String(requestIdAttribute, req.Id))
 	zap.L().Debug("Fetching model.Sms from Repository", zap.String(requestIdAttribute, req.Id))
 	fromDb, err := instance.smsRepository.FindById(req.Id)
 	if err != nil {
-		zap.L().Error("Cannot fetch model.Sms from Repository", zap.String(requestIdAttribute, req.Id), zap.Error(err))
+		zap.L().Error("Cannot fetch model.Sms from Repository",
+			zap.String(requestIdAttribute, req.Id), zap.Error(err))
 		return asyncapi.SendSmsResponse{}, err
 	}
 	if fromDb != nil {
-		zap.L().Debug("Retrieved model.Sms from Repository. No action will be taken",
-			zap.String(requestIdAttribute, req.Id))
+		return instance.getAsyncResponseFromDb(req, fromDb)
+	}
+	return instance.doAccept(req, instant)
+}
+
+func (instance *SmppSendSmsRequestListener) getAsyncResponseFromDb(req asyncapi.SendSmsRequest, fromDb *model.Sms) (asyncapi.SendSmsResponse, error) {
+	zap.L().Debug("Retrieved model.Sms from Repository. No action will be taken",
+		zap.String(requestIdAttribute, req.Id))
+	if fromDb.CanceledAt != nil {
+		return asyncapi.SendSmsResponse{
+			Id:         fromDb.Id,
+			CanceledAt: fromDb.CanceledAt,
+		}, nil
+	} else if fromDb.Error != "" {
+		return asyncapi.SendSmsResponse{
+			Id:   fromDb.Id,
+			Smsc: fromDb.Smpp,
+			Problem: &asyncapi.Problem{
+				Detail: fromDb.Error,
+				Title:  "Cannot send async.SendSmsRequest",
+				Type:   "/smsc/sendSmsRequest/something-went-wrong",
+			},
+		}, nil
+	} else {
 		deliveryStrategy := asyncapi.NotTrackingDeliveryStrategy
 		if fromDb.TrackDelivery {
 			deliveryStrategy = asyncapi.TrackingDeliveryStrategy
@@ -56,31 +79,45 @@ func (instance *SmppSendSmsRequestListener) ListenTo(req asyncapi.SendSmsRequest
 			Delivery: deliveryStrategy,
 		}, nil
 	}
-	resp, err := instance.doListenTo(req)
+}
+
+func (instance *SmppSendSmsRequestListener) doAccept(req asyncapi.SendSmsRequest, receivedAt time.Time) (asyncapi.SendSmsResponse, error) {
+	zap.L().Debug("Submitting asyncapi.SendSmsRequest into smpp.Connector(s)",
+		zap.String(requestIdAttribute, req.Id))
+	resp, err := instance.sendRequest(req)
 	if err != nil {
-		zap.L().Error("Cannot consume asyncapi.SendSmsRequest due to an error",
+		zap.L().Error("Cannot process asyncapi.SendSmsRequest due to an error",
 			zap.String(requestIdAttribute, req.Id),
 			zap.Error(err))
 		return asyncapi.SendSmsResponse{}, err
 	}
-	zap.L().Debug("Persisting model.Sms for asyncapi.SendSmsRequest",
-		zap.String(requestIdAttribute, req.Id),
-		zap.String(smpp.SmsIdAttribute, resp.Id),
-		zap.String(smpp.SmscIdAttribute, resp.Smsc.Id),
-	)
-	err = instance.smsRepository.Save(&model.Sms{
+	sms := &model.Sms{
 		Id:         req.Id,
 		TrackId:    resp.Id,
-		ListenedAt: instant,
 		Smpp:       resp.Smsc,
-	})
+		ListenedAt: receivedAt,
+	}
+	if resp.Problem != nil {
+		sms.Error = resp.Problem.Detail
+	}
+	opts := []zap.Field{
+		zap.String(requestIdAttribute, req.Id),
+		zap.String(smpp.SmsIdAttribute, resp.Id),
+	}
+
+	if resp.Smsc != nil {
+		opts = append(opts, zap.String(smpp.SmscIdAttribute, resp.Smsc.Id))
+	}
+
+	zap.L().Debug("Persisting model.Sms for asyncapi.SendSmsRequest", opts...)
+	err = instance.smsRepository.Save(sms)
 	if err != nil {
 		return asyncapi.SendSmsResponse{}, err
 	}
 	return resp.SendSmsResponse, nil
 }
 
-func (instance *SmppSendSmsRequestListener) doListenTo(req asyncapi.SendSmsRequest) (SendSmsResponse, error) {
+func (instance *SmppSendSmsRequestListener) sendRequest(req asyncapi.SendSmsRequest) (SendSmsResponse, error) {
 	sendSmsResponse := SendSmsResponse{
 		SendSmsResponse: asyncapi.SendSmsResponse{
 			Id: req.Id,
@@ -88,12 +125,13 @@ func (instance *SmppSendSmsRequestListener) doListenTo(req asyncapi.SendSmsReque
 	}
 	zap.L().Debug("Retrieving []smpp.Connector  in order to process asyncapi.SendSmsRequest",
 		zap.String(requestIdAttribute, req.Id))
+	canSendRequest := false
 	for _, each := range instance.manager.GetList() {
 		zap.L().Debug(fmt.Sprintf("Fetching outbound.SendSmsRequestPredicate smpp.Connector[id=%s]",
 			each.GetId()), zap.String(requestIdAttribute, req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 			zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
 		)
-		predicate, hasValue := instance.cache[each.GetId()]
+		predicate, hasValue := instance.predicate[each.GetId()]
 		if !hasValue {
 			zap.L().Warn(fmt.Sprintf("Cannot fetch outbound.SendSmsRequestPredicate smpp.Connector[id=%s]",
 				each.GetId()), zap.String(requestIdAttribute, req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
@@ -113,6 +151,7 @@ func (instance *SmppSendSmsRequestListener) doListenTo(req asyncapi.SendSmsReque
 			)
 			continue
 		}
+		canSendRequest = true
 		zap.L().Debug(fmt.Sprintf("Starting sendMessage on smpp.Connector[id=%s]",
 			each.GetId()), zap.String(requestIdAttribute, req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 			zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
@@ -137,23 +176,24 @@ func (instance *SmppSendSmsRequestListener) doListenTo(req asyncapi.SendSmsReque
 			sendSmsResponse.Delivery = asyncapi.TrackingDeliveryStrategy
 		}
 	}
-
 	if sendSmsResponse.SendSmsResponse.Smsc == nil {
+		if canSendRequest {
+			return sendSmsResponse, NewServiceNotAvailable()
+		}
 		sendSmsResponse.SendSmsResponse.Problem = &asyncapi.Problem{
 			Title:  "Cannot send async.SendSmsRequest",
-			Type:   "/smsc/sendSmsRequest/unprocessable-entity",
+			Type:   "/smsc/sendSmsRequest/no-connector-found",
 			Detail: "Couldn't determine smpp.Connector capable of sending asyncapi.SendSmsRequest",
 		}
 	}
-
 	return sendSmsResponse, nil
 }
 
 func (instance *SmppSendSmsRequestListener) Close() error {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
-	if instance.cache != nil {
-		instance.cache = nil
+	if instance.predicate != nil {
+		instance.predicate = nil
 	}
 	return nil
 }
@@ -161,10 +201,10 @@ func (instance *SmppSendSmsRequestListener) Close() error {
 func (instance *SmppSendSmsRequestListener) AfterPropertiesSet() error {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
-	if instance.cache == nil {
-		instance.cache = make(map[string]SendSmsRequestPredicate)
+	if instance.predicate == nil {
+		instance.predicate = make(map[string]SendSmsRequestPredicate)
 	}
-	zap.L().Info("Setting up outbound.SendSmsRequestListener")
+	zap.L().Info("Setting up outbound.SendSmsRequestHandler")
 	for _, each := range instance.manager.GetList() {
 		zap.L().Debug("Setting up outbound.SendSmsRequestPredicate for smpp.Connector",
 			zap.String(smpp.SmscIdAttribute, each.GetId()),
@@ -197,7 +237,7 @@ func (instance *SmppSendSmsRequestListener) AfterPropertiesSet() error {
 			)
 			continue
 		}
-		instance.cache[each.GetId()] = predicate
+		instance.predicate[each.GetId()] = predicate
 	}
 	return nil
 }

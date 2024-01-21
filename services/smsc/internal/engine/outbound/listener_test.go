@@ -2,6 +2,7 @@ package outbound
 
 import (
 	goContext "context"
+	"encoding/json"
 	"fmt"
 	"github.com/delfimarime/hermes/services/smsc/internal/context"
 	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
@@ -85,10 +86,10 @@ func TestSmppSendSmsRequestListener_ListenTo_when_no_connectors(t *testing.T) {
 	}
 	var resp asyncapi.SendSmsResponse
 	app := NewApp(t, TestAppConfig{},
-		fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestListener) {
+		fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestHandler) {
 			lifecycle.Append(fx.Hook{
 				OnStart: func(ctx goContext.Context) error {
-					response, err := l.ListenTo(req)
+					response, err := l.Accept(req)
 					if err != nil {
 						return err
 					}
@@ -98,7 +99,8 @@ func TestSmppSendSmsRequestListener_ListenTo_when_no_connectors(t *testing.T) {
 			})
 		}))
 	defer app.RequireStart().RequireStop()
-	fmt.Println(resp)
+	b, _ := json.Marshal(resp)
+	fmt.Println(string(b))
 }
 
 type TestConnectorManager struct {

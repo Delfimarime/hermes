@@ -6,8 +6,8 @@ import (
 	"io"
 )
 
-type SendSmsRequestListener interface {
+type SendSmsRequestHandler interface {
 	io.Closer
 	common.PostConfigurable
-	ListenTo(request asyncapi.SendSmsRequest) (asyncapi.SendSmsResponse, error)
+	Accept(request asyncapi.SendSmsRequest) (asyncapi.SendSmsResponse, error)
 }

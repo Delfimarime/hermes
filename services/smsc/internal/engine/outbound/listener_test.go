@@ -2,14 +2,15 @@ package outbound
 
 import (
 	goContext "context"
-	"encoding/json"
-	"fmt"
 	"github.com/delfimarime/hermes/services/smsc/internal/context"
+	"github.com/delfimarime/hermes/services/smsc/internal/model"
 	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
 	"github.com/delfimarime/hermes/services/smsc/internal/smpp"
 	"github.com/delfimarime/hermes/services/smsc/pkg/asyncapi"
+	"github.com/delfimarime/hermes/services/smsc/pkg/common"
 	"github.com/delfimarime/hermes/services/smsc/pkg/config"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/fx/fxtest"
@@ -55,7 +56,7 @@ func NewApp(t *testing.T, cfg TestAppConfig, fxOptions ...fx.Option) *fxtest.App
 				if cfg.SmppRepository != nil {
 					return cfg.SmppRepository
 				}
-				return &SequenceBasedSmsRepository{}
+				return &SequenceBasedSmppRepository{}
 			},
 			func() sdk.SmsRepository {
 				if cfg.SmsRepository != nil {
@@ -76,7 +77,7 @@ func NewApp(t *testing.T, cfg TestAppConfig, fxOptions ...fx.Option) *fxtest.App
 	return fxtest.New(t, options...)
 }
 
-func TestSmppSendSmsRequestListener_ListenTo_when_no_connectors(t *testing.T) {
+func TestSmppSendSmsRequestListener_Accept_when_no_connectors(t *testing.T) {
 	req := asyncapi.SendSmsRequest{
 		Id:      uuid.New().String(),
 		To:      "+25884990XXXX",
@@ -99,72 +100,102 @@ func TestSmppSendSmsRequestListener_ListenTo_when_no_connectors(t *testing.T) {
 			})
 		}))
 	defer app.RequireStart().RequireStop()
-	b, _ := json.Marshal(resp)
-	fmt.Println(string(b))
+	require.Equal(t, req.Id, resp.Id)
+	require.Nil(t, resp.Smsc)
+	require.Nil(t, resp.CanceledAt)
+	require.Empty(t, resp.Delivery)
+	require.NotNil(t, resp.Problem)
+	require.Equal(t, CannotSendSmsRequestProblemType, resp.Problem.Type)
+	require.Equal(t, CannotSendSmsRequestProblemTitle, resp.Problem.Title)
+	require.Equal(t, CannotSendSmsRequestProblemDetail, resp.Problem.Detail)
 }
 
-type TestConnectorManager struct {
-	seq []smpp.Connector
-}
-
-func (t *TestConnectorManager) Close() error {
-	return nil
-}
-
-func (t *TestConnectorManager) GetList() []smpp.Connector {
-	return t.seq
-}
-
-func (t *TestConnectorManager) AfterPropertiesSet() error {
-	return nil
-}
-
-func (t *TestConnectorManager) GetById(id string) smpp.Connector {
-	if t.seq == nil {
-		return nil
+// Expects a response that informs that there aren't any connector capable of sending such message
+func TestSmppSendSmsRequestListener_Accept_when_no_connector_rule_match(t *testing.T) {
+	req := asyncapi.SendSmsRequest{
+		Id:      uuid.New().String(),
+		To:      "+25884990XXXX",
+		Tags:    []string{"banking", "onboard"},
+		From:    "onboard-workflow",
+		Content: "Welcome to our bank",
 	}
-	for _, each := range t.seq {
-		if each.GetId() == id {
-			return each
-		}
-	}
-	return nil
+	connectorId := uuid.New().String()
+	var resp asyncapi.SendSmsResponse
+	app := NewApp(t, TestAppConfig{
+		ConnectorManager: &TestConnectorManager{
+			seq: []smpp.Connector{
+				TestConnector{
+					trackDelivery:  false,
+					alias:          "vm",
+					connectionType: "TRANSMITTER",
+					id:             connectorId,
+					state:          smpp.ReadyConnectorLifecycleState,
+				},
+			},
+		},
+		SmppRepository: SequenceBasedSmppRepository{
+			Arr: []model.Smpp{
+				{
+					Id:          connectorId,
+					Name:        "vodacom",
+					Description: "<DESCRIPTION/>",
+					Type:        "TRANSMITTER",
+					Alias:       "vm",
+				},
+			},
+			Condition: map[string]model.Condition{
+				connectorId: {
+					Predicate: model.Predicate{
+						EqualTo: common.ToStrPointer("25884XXX"),
+						Subject: common.ToStrPointer(string(Destination)),
+					},
+				},
+			},
+		},
+	},
+		fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestHandler) {
+			lifecycle.Append(fx.Hook{
+				OnStart: func(ctx goContext.Context) error {
+					response, err := l.Accept(req)
+					if err != nil {
+						return err
+					}
+					resp = response
+					return nil
+				},
+			})
+		}))
+	defer app.RequireStart().RequireStop()
+	require.Equal(t, req.Id, resp.Id)
+	require.Nil(t, resp.Smsc)
+	require.Nil(t, resp.CanceledAt)
+	require.Empty(t, resp.Delivery)
+	require.NotNil(t, resp.Problem)
+	require.Equal(t, CannotSendSmsRequestProblemType, resp.Problem.Type)
+	require.Equal(t, CannotSendSmsRequestProblemTitle, resp.Problem.Title)
+	require.Equal(t, CannotSendSmsRequestProblemDetail, resp.Problem.Detail)
 }
 
-type TestConnector struct {
-	err            error
-	trackDelivery  bool
-	id             string
-	connectionType string
-	alias          string
-	state          smpp.State
+// Expects a response that informs message has been sent successfully
+func TestSmppSendSmsRequestListener_Accept_when_a_connector_can_send_the_message(t *testing.T) {
 }
 
-func (t TestConnector) GetId() string {
-	return t.id
+// Expects a response that informs message has been sent successfully
+func TestSmppSendSmsRequestListener_Accept_when_the_first_connector_is_unavailable_and_a_secondary_is_available(t *testing.T) {
 }
 
-func (t TestConnector) GetType() string {
-	return t.connectionType
+// Expects an error[Service-Not-Available]
+func TestSmppSendSmsRequestListener_Accept_when_a_connectors_are_unavailable(t *testing.T) {
 }
 
-func (t TestConnector) GetAlias() string {
-	return t.alias
+// Expects a response that informs that the message have been canceled
+func TestSmppSendSmsRequestListener_Accept_when_the_request_is_canceled(t *testing.T) {
 }
 
-func (t TestConnector) GetState() smpp.State {
-	return t.state
+// Expects a response that informs that the message has been sent before [rebuilding the response]
+func TestSmppSendSmsRequestListener_Accept_when_the_request_has_been_sent_previous(t *testing.T) {
 }
 
-func (t TestConnector) IsTrackingDelivery() bool {
-	return t.trackDelivery
-}
-
-func (t TestConnector) SendMessage(_, _ string) (smpp.SendMessageResponse, error) {
-	if t.err != nil {
-		return smpp.SendMessageResponse{}, t.err
-	}
-	return smpp.SendMessageResponse{
-		Id: uuid.New().String(),
-	}, nil
+// Expects a response that informs that the message has terminated with an error [rebuilding the response]
+func TestSmppSendSmsRequestListener_Accept_when_the_request_has_been_previous_processed_with_error(t *testing.T) {
 }

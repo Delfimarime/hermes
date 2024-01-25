@@ -13,6 +13,12 @@ import (
 )
 
 const (
+	CannotSendSmsRequestProblemTitle  string = "Cannot send async.SendSmsRequest"
+	CannotSendSmsRequestProblemType   string = "/smsc/sendSmsRequest/no-connector-found"
+	CannotSendSmsRequestProblemDetail string = "Couldn't determine smpp.Connector capable of sending asyncapi.SendSmsRequest"
+)
+
+const (
 	requestIdAttribute = "send_sms_request_id"
 )
 
@@ -104,11 +110,9 @@ func (instance *SmppSendSmsRequestListener) doAccept(req asyncapi.SendSmsRequest
 		zap.String(requestIdAttribute, req.Id),
 		zap.String(smpp.SmsIdAttribute, resp.Id),
 	}
-
 	if resp.Smsc != nil {
 		opts = append(opts, zap.String(smpp.SmscIdAttribute, resp.Smsc.Id))
 	}
-
 	zap.L().Debug("Persisting model.Sms for asyncapi.SendSmsRequest", opts...)
 	err = instance.smsRepository.Save(sms)
 	if err != nil {
@@ -181,9 +185,9 @@ func (instance *SmppSendSmsRequestListener) sendRequest(req asyncapi.SendSmsRequ
 			return sendSmsResponse, NewServiceNotAvailable()
 		}
 		sendSmsResponse.SendSmsResponse.Problem = &asyncapi.Problem{
-			Title:  "Cannot send async.SendSmsRequest",
-			Type:   "/smsc/sendSmsRequest/no-connector-found",
-			Detail: "Couldn't determine smpp.Connector capable of sending asyncapi.SendSmsRequest",
+			Type:   CannotSendSmsRequestProblemType,
+			Title:  CannotSendSmsRequestProblemTitle,
+			Detail: CannotSendSmsRequestProblemDetail,
 		}
 	}
 	return sendSmsResponse, nil

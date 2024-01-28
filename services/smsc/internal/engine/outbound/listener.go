@@ -41,7 +41,7 @@ func (instance *SmppSendSmsRequestListener) Accept(req asyncapi.SendSmsRequest) 
 	if err != nil {
 		zap.L().Error("Cannot fetch model.Sms from Repository",
 			zap.String(requestIdAttribute, req.Id), zap.Error(err))
-		return asyncapi.SendSmsResponse{}, err
+		return asyncapi.SendSmsResponse{}, NewServiceNotAvailable(GenericProblemDetail)
 	}
 	if fromDb != nil {
 		return instance.getAsyncResponseFromDb(req, fromDb)
@@ -178,7 +178,7 @@ func (instance *SmppSendSmsRequestListener) sendRequest(req asyncapi.SendSmsRequ
 	}
 	if response.SendSmsResponse.Smsc == nil {
 		if canSendRequest {
-			return response, NewServiceNotAvailable()
+			return response, NewServiceNotAvailable("")
 		}
 		response.SendSmsResponse.Problem = &asyncapi.Problem{
 			Type:   CannotSendSmsRequestProblemType,

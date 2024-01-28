@@ -3,8 +3,9 @@ package outbound
 type ErrorType string
 
 const (
-	GenericProblemTitle = "Cannot send async.SendSmsRequest"
-	GenericProblemType  = "/smsc/sendSmsRequest/something-went-wrong"
+	GenericProblemTitle  = "Cannot send async.SendSmsRequest"
+	GenericProblemType   = "/smsc/sendSmsRequest/something-went-wrong"
+	GenericProblemDetail = "Cannot send async.SendSmsRequest due to an error"
 )
 
 const (
@@ -27,9 +28,13 @@ func (instance *CannotHandleSendSmsRequestError) Error() string {
 	return instance.Detail
 }
 
-func NewServiceNotAvailable() error {
+func NewServiceNotAvailable(msg string) error {
+	detail := msg
+	if detail == "" {
+		detail = ServiceNotFoundDetail
+	}
 	return &CannotHandleSendSmsRequestError{
+		Detail: detail,
 		Type:   ServiceNotAvailable,
-		Detail: ServiceNotFoundDetail,
 	}
 }

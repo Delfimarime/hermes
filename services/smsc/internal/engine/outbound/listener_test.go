@@ -2,6 +2,7 @@ package outbound
 
 import (
 	goContext "context"
+	"errors"
 	"github.com/delfimarime/hermes/services/smsc/internal/context"
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
 	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
@@ -75,6 +76,33 @@ func NewApp(t *testing.T, cfg TestAppConfig, fxOptions ...fx.Option) *fxtest.App
 	}
 	options = append(options, fxOptions...)
 	return fxtest.New(t, options...)
+}
+
+func TestSmppSendSmsRequestListener_Accept_when_repo_has_error(t *testing.T) {
+	req := asyncapi.SendSmsRequest{
+		Id:      uuid.New().String(),
+		To:      "+25884990XXXX",
+		Tags:    []string{"banking", "onboard"},
+		From:    "onboard-workflow",
+		Content: "Welcome to our bank",
+	}
+	var caught error
+	app := NewApp(t, TestAppConfig{
+		SmsRepository: &InMemorySmsRepository{Err: errors.New("<exception/>")},
+	},
+		fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestHandler) {
+			lifecycle.Append(fx.Hook{
+				OnStart: func(ctx goContext.Context) error {
+					_, caught = l.Accept(req)
+					return nil
+				},
+			})
+		}))
+	defer app.RequireStart().RequireStop()
+	_, isCannotHandleSendSmsRequestError := caught.(*CannotHandleSendSmsRequestError)
+	require.NotNil(t, caught)
+	require.True(t, isCannotHandleSendSmsRequestError)
+	require.Equal(t, GenericProblemDetail, caught.Error())
 }
 
 func TestSmppSendSmsRequestListener_Accept_when_no_connectors(t *testing.T) {

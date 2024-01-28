@@ -15,7 +15,7 @@ func GetUberFxModule() fx.Option {
 				smsRepository sdk.SmsRepository,
 				smppRepository sdk.SmppRepository,
 			) SendSmsRequestHandler {
-				return &SmppSendSmsRequestListener{
+				return &SmppSendSmsRequestHandler{
 					manager:        cm,
 					smsRepository:  smsRepository,
 					smppRepository: smppRepository,

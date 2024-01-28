@@ -25,7 +25,7 @@ type SendSmsResponse struct {
 	asyncapi.SendSmsResponse
 }
 
-type SmppSendSmsRequestListener struct {
+type SmppSendSmsRequestHandler struct {
 	mutex          sync.Mutex
 	smsRepository  sdk.SmsRepository
 	smppRepository sdk.SmppRepository
@@ -33,7 +33,7 @@ type SmppSendSmsRequestListener struct {
 	predicate      map[string]SendSmsRequestPredicate
 }
 
-func (instance *SmppSendSmsRequestListener) Accept(req asyncapi.SendSmsRequest) (asyncapi.SendSmsResponse, error) {
+func (instance *SmppSendSmsRequestHandler) Accept(req asyncapi.SendSmsRequest) (asyncapi.SendSmsResponse, error) {
 	instant := time.Now()
 	zap.L().Info("Listening to asyncapi.SendSmsRequest", zap.String(requestIdAttribute, req.Id))
 	zap.L().Debug("Fetching model.Sms from Repository", zap.String(requestIdAttribute, req.Id))
@@ -49,7 +49,7 @@ func (instance *SmppSendSmsRequestListener) Accept(req asyncapi.SendSmsRequest) 
 	return instance.doAccept(req, instant)
 }
 
-func (instance *SmppSendSmsRequestListener) getAsyncResponseFromDb(req asyncapi.SendSmsRequest, fromDb *model.Sms) (asyncapi.SendSmsResponse, error) {
+func (instance *SmppSendSmsRequestHandler) getAsyncResponseFromDb(req asyncapi.SendSmsRequest, fromDb *model.Sms) (asyncapi.SendSmsResponse, error) {
 	zap.L().Debug("Retrieved model.Sms from Repository. No action will be taken",
 		zap.String(requestIdAttribute, req.Id))
 	if fromDb.CanceledAt != nil {
@@ -80,7 +80,7 @@ func (instance *SmppSendSmsRequestListener) getAsyncResponseFromDb(req asyncapi.
 	}
 }
 
-func (instance *SmppSendSmsRequestListener) doAccept(req asyncapi.SendSmsRequest, receivedAt time.Time) (asyncapi.SendSmsResponse, error) {
+func (instance *SmppSendSmsRequestHandler) doAccept(req asyncapi.SendSmsRequest, receivedAt time.Time) (asyncapi.SendSmsResponse, error) {
 	zap.L().Debug("Submitting asyncapi.SendSmsRequest into smpp.Connector(s)",
 		zap.String(requestIdAttribute, req.Id))
 	resp, err := instance.sendRequest(req)
@@ -118,7 +118,7 @@ func (instance *SmppSendSmsRequestListener) doAccept(req asyncapi.SendSmsRequest
 	return resp.SendSmsResponse, nil
 }
 
-func (instance *SmppSendSmsRequestListener) sendRequest(req asyncapi.SendSmsRequest) (SendSmsResponse, error) {
+func (instance *SmppSendSmsRequestHandler) sendRequest(req asyncapi.SendSmsRequest) (SendSmsResponse, error) {
 	response := SendSmsResponse{
 		SendSmsResponse: asyncapi.SendSmsResponse{
 			Id: req.Id,
@@ -189,7 +189,7 @@ func (instance *SmppSendSmsRequestListener) sendRequest(req asyncapi.SendSmsRequ
 	return response, nil
 }
 
-func (instance *SmppSendSmsRequestListener) Close() error {
+func (instance *SmppSendSmsRequestHandler) Close() error {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
 	if instance.predicate != nil {
@@ -198,7 +198,7 @@ func (instance *SmppSendSmsRequestListener) Close() error {
 	return nil
 }
 
-func (instance *SmppSendSmsRequestListener) AfterPropertiesSet() error {
+func (instance *SmppSendSmsRequestHandler) AfterPropertiesSet() error {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
 	if instance.predicate == nil {

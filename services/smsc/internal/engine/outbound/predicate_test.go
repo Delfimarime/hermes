@@ -195,48 +195,6 @@ func TestToPredicate_with_subject_from_min_and_max_length(t *testing.T) {
 	}
 }
 
-/*
-	func TestToPredicate_with_subject_part_of_sms_min_and_max_length(t *testing.T) {
-		predicate, err := toPredicate(model.Condition{
-			Predicate: model.Predicate{
-				MinimumLength: common.ToIntPointer(1),
-				MaximumLength: common.ToIntPointer(2),
-				Subject:       common.ToStrPointer(string(Content)),
-			},
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		var definitions = []struct {
-			result bool
-			name   string
-			parts  []string
-		}{
-			{name: "request with parts=nil[violates minimum]", result: false, parts: nil},
-			{name: "request with length(parts)=0[violates minimum]", result: false, parts: []string{}},
-			{name: "request with length(parts)=1", result: true, parts: []string{"hello"}},
-			{name: "request with length(parts)=2", result: true, parts: []string{"hello", "world"}},
-			{name: "request with length(parts)=3[violates maximum]", result: false, parts: []string{"hello", "wor", "ld"}},
-		}
-		for _, tt := range definitions {
-			t.Run(tt.name, func(t *testing.T) {
-				var messages []asyncapi.SendSmsRequestPart = nil
-				if tt.parts != nil {
-					messages = make([]asyncapi.SendSmsRequestPart, 0)
-					for _, content := range tt.parts {
-						messages = append(messages, asyncapi.SendSmsRequestPart{
-							Content: content,
-						})
-					}
-				}
-				r := predicate(asyncapi.SendSmsRequest{
-					Messages: messages,
-				})
-				require.Equal(t, tt.result, r)
-			})
-		}
-	}
-*/
 func TestToPredicate_with_subject_tag_equal_to(t *testing.T) {
 	predicate, err := toPredicate(model.Condition{
 		Predicate: model.Predicate{

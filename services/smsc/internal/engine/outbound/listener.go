@@ -1,7 +1,6 @@
 package outbound
 
 import (
-	"errors"
 	"fmt"
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
 	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
@@ -10,12 +9,6 @@ import (
 	"go.uber.org/zap"
 	"sync"
 	"time"
-)
-
-const (
-	CannotSendSmsRequestProblemTitle  string = "Cannot send async.SendSmsRequest"
-	CannotSendSmsRequestProblemType   string = "/smsc/sendSmsRequest/no-connector-found"
-	CannotSendSmsRequestProblemDetail string = "Couldn't determine smpp.Connector capable of sending asyncapi.SendSmsRequest"
 )
 
 const (
@@ -70,8 +63,8 @@ func (instance *SmppSendSmsRequestListener) getAsyncResponseFromDb(req asyncapi.
 			Smsc: fromDb.Smpp,
 			Problem: &asyncapi.Problem{
 				Detail: fromDb.Error,
-				Title:  "Cannot send async.SendSmsRequest",
-				Type:   "/smsc/sendSmsRequest/something-went-wrong",
+				Type:   GenericProblemType,
+				Title:  GenericProblemTitle,
 			},
 		}, nil
 	} else {
@@ -98,10 +91,11 @@ func (instance *SmppSendSmsRequestListener) doAccept(req asyncapi.SendSmsRequest
 		return asyncapi.SendSmsResponse{}, err
 	}
 	sms := &model.Sms{
-		Id:         req.Id,
-		TrackId:    resp.Id,
-		Smpp:       resp.Smsc,
-		ListenedAt: receivedAt,
+		Id:            req.Id,
+		TrackId:       resp.Id,
+		Smpp:          resp.Smsc,
+		ListenedAt:    receivedAt,
+		TrackDelivery: false,
 	}
 	if resp.Problem != nil {
 		sms.Error = resp.Problem.Detail
@@ -113,6 +107,9 @@ func (instance *SmppSendSmsRequestListener) doAccept(req asyncapi.SendSmsRequest
 	if resp.Smsc != nil {
 		opts = append(opts, zap.String(smpp.SmscIdAttribute, resp.Smsc.Id))
 	}
+	if resp.Delivery == asyncapi.TrackingDeliveryStrategy {
+		sms.TrackDelivery = true
+	}
 	zap.L().Debug("Persisting model.Sms for asyncapi.SendSmsRequest", opts...)
 	err = instance.smsRepository.Save(sms)
 	if err != nil {
@@ -122,7 +119,7 @@ func (instance *SmppSendSmsRequestListener) doAccept(req asyncapi.SendSmsRequest
 }
 
 func (instance *SmppSendSmsRequestListener) sendRequest(req asyncapi.SendSmsRequest) (SendSmsResponse, error) {
-	sendSmsResponse := SendSmsResponse{
+	response := SendSmsResponse{
 		SendSmsResponse: asyncapi.SendSmsResponse{
 			Id: req.Id,
 		},
@@ -162,8 +159,7 @@ func (instance *SmppSendSmsRequestListener) sendRequest(req asyncapi.SendSmsRequ
 		)
 		sendMessageResponse, err := each.SendMessage(req.To, req.Content)
 		if err != nil {
-			var unavailableConnectorError *smpp.UnavailableConnectorError
-			if errors.As(err, &unavailableConnectorError) {
+			if _, isConnectorUnavailable := err.(smpp.UnavailableConnectorError); isConnectorUnavailable {
 				zap.L().Warn(fmt.Sprintf("Cannot sendMessage on smpp.Connector[id=%s] since it's not available",
 					each.GetId()), zap.String(requestIdAttribute, req.Id), zap.String(smpp.SmscIdAttribute, each.GetId()),
 					zap.String(smpp.SmscAliasAttribute, each.GetAlias()),
@@ -173,24 +169,24 @@ func (instance *SmppSendSmsRequestListener) sendRequest(req asyncapi.SendSmsRequ
 			}
 			return SendSmsResponse{}, err
 		}
-		sendSmsResponse.Id = sendMessageResponse.Id
-		sendSmsResponse.Delivery = asyncapi.NotTrackingDeliveryStrategy
-		sendSmsResponse.Smsc = &asyncapi.ObjectId{Id: each.GetId()}
+		response.Id = sendMessageResponse.Id
+		response.Delivery = asyncapi.NotTrackingDeliveryStrategy
+		response.Smsc = &asyncapi.ObjectId{Id: each.GetId()}
 		if each.IsTrackingDelivery() {
-			sendSmsResponse.Delivery = asyncapi.TrackingDeliveryStrategy
+			response.Delivery = asyncapi.TrackingDeliveryStrategy
 		}
 	}
-	if sendSmsResponse.SendSmsResponse.Smsc == nil {
+	if response.SendSmsResponse.Smsc == nil {
 		if canSendRequest {
-			return sendSmsResponse, NewServiceNotAvailable()
+			return response, NewServiceNotAvailable()
 		}
-		sendSmsResponse.SendSmsResponse.Problem = &asyncapi.Problem{
+		response.SendSmsResponse.Problem = &asyncapi.Problem{
 			Type:   CannotSendSmsRequestProblemType,
 			Title:  CannotSendSmsRequestProblemTitle,
 			Detail: CannotSendSmsRequestProblemDetail,
 		}
 	}
-	return sendSmsResponse, nil
+	return response, nil
 }
 
 func (instance *SmppSendSmsRequestListener) Close() error {

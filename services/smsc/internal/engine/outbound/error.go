@@ -3,7 +3,19 @@ package outbound
 type ErrorType string
 
 const (
-	ServiceNotAvailable ErrorType = "SERVICE_NOT_AVAILABLE"
+	GenericProblemTitle = "Cannot send async.SendSmsRequest"
+	GenericProblemType  = "/smsc/sendSmsRequest/something-went-wrong"
+)
+
+const (
+	ServiceNotAvailable   ErrorType = "SERVICE_NOT_AVAILABLE"
+	ServiceNotFoundDetail string    = "Cannot send async.SendSmsRequest due to connector(s) unavailable"
+)
+
+const (
+	CannotSendSmsRequestProblemTitle  string = "Cannot send async.SendSmsRequest"
+	CannotSendSmsRequestProblemType   string = "/smsc/sendSmsRequest/no-connector-found"
+	CannotSendSmsRequestProblemDetail string = "Couldn't determine smpp.Connector capable of sending asyncapi.SendSmsRequest"
 )
 
 type CannotHandleSendSmsRequestError struct {
@@ -17,7 +29,7 @@ func (instance *CannotHandleSendSmsRequestError) Error() string {
 
 func NewServiceNotAvailable() error {
 	return &CannotHandleSendSmsRequestError{
-		Detail: "Cannot",
 		Type:   ServiceNotAvailable,
+		Detail: ServiceNotFoundDetail,
 	}
 }

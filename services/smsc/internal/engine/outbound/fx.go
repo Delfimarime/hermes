@@ -3,6 +3,7 @@ package outbound
 import (
 	goContext "context"
 	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
+	sdk2 "github.com/delfimarime/hermes/services/smsc/internal/sdk"
 	"github.com/delfimarime/hermes/services/smsc/internal/smpp"
 	"go.uber.org/fx"
 )
@@ -14,7 +15,7 @@ func GetUberFxModule() fx.Option {
 				cm smpp.ConnectorManager,
 				smsRepository sdk.SmsRepository,
 				smppRepository sdk.SmppRepository,
-			) SendSmsRequestHandler {
+			) sdk2.SendSmsRequestHandler {
 				return &SmppSendSmsRequestHandler{
 					manager:        cm,
 					smsRepository:  smsRepository,
@@ -24,7 +25,7 @@ func GetUberFxModule() fx.Option {
 			},
 		),
 		fx.Invoke(
-			func(lifecycle fx.Lifecycle, s SendSmsRequestHandler) {
+			func(lifecycle fx.Lifecycle, s sdk2.SendSmsRequestHandler) {
 				lifecycle.Append(
 					fx.Hook{
 						OnStop: func(ctx goContext.Context) error {

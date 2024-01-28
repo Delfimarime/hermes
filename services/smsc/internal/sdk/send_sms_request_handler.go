@@ -1,4 +1,4 @@
-package outbound
+package sdk
 
 import (
 	"github.com/delfimarime/hermes/services/smsc/pkg/asyncapi"

@@ -6,6 +6,7 @@ import (
 	"github.com/delfimarime/hermes/services/smsc/internal/context"
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
 	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
+	sdk2 "github.com/delfimarime/hermes/services/smsc/internal/sdk"
 	"github.com/delfimarime/hermes/services/smsc/internal/smpp"
 	"github.com/delfimarime/hermes/services/smsc/pkg/asyncapi"
 	"github.com/delfimarime/hermes/services/smsc/pkg/common"
@@ -90,7 +91,7 @@ func TestSmppSendSmsRequestListener_Accept_when_repo_has_error(t *testing.T) {
 	app := NewApp(t, TestAppConfig{
 		SmsRepository: &InMemorySmsRepository{Err: errors.New("<exception/>")},
 	},
-		fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestHandler) {
+		fx.Invoke(func(lifecycle fx.Lifecycle, l sdk2.SendSmsRequestHandler) {
 			lifecycle.Append(fx.Hook{
 				OnStart: func(ctx goContext.Context) error {
 					_, caught = l.Accept(req)
@@ -115,7 +116,7 @@ func TestSmppSendSmsRequestListener_Accept_when_no_connectors(t *testing.T) {
 	}
 	var resp asyncapi.SendSmsResponse
 	app := NewApp(t, TestAppConfig{},
-		fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestHandler) {
+		fx.Invoke(func(lifecycle fx.Lifecycle, l sdk2.SendSmsRequestHandler) {
 			lifecycle.Append(fx.Hook{
 				OnStart: func(ctx goContext.Context) error {
 					response, err := l.Accept(req)
@@ -180,7 +181,7 @@ func TestSmppSendSmsRequestListener_Accept_when_no_connector_rule_match(t *testi
 			},
 		},
 	},
-		fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestHandler) {
+		fx.Invoke(func(lifecycle fx.Lifecycle, l sdk2.SendSmsRequestHandler) {
 			lifecycle.Append(fx.Hook{
 				OnStart: func(ctx goContext.Context) error {
 					response, err := l.Accept(req)
@@ -243,7 +244,7 @@ func TestSmppSendSmsRequestListener_Accept_when_a_connector_can_send_the_message
 				SmppRepository:   smppRepo,
 				ConnectorManager: smppManager,
 			},
-				fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestHandler) {
+				fx.Invoke(func(lifecycle fx.Lifecycle, l sdk2.SendSmsRequestHandler) {
 					lifecycle.Append(fx.Hook{
 						OnStart: func(ctx goContext.Context) error {
 							response, err := l.Accept(req)
@@ -326,7 +327,7 @@ func TestSmppSendSmsRequestListener_Accept_when_the_first_connector_is_unavailab
 				SmppRepository:   smppRepo,
 				ConnectorManager: smppManager,
 			},
-				fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestHandler) {
+				fx.Invoke(func(lifecycle fx.Lifecycle, l sdk2.SendSmsRequestHandler) {
 					lifecycle.Append(fx.Hook{
 						OnStart: func(ctx goContext.Context) error {
 							response, err := l.Accept(req)
@@ -393,7 +394,7 @@ func TestSmppSendSmsRequestListener_Accept_when_connectors_are_unavailable(t *te
 		SmppRepository:   smppRepo,
 		ConnectorManager: smppManager,
 	},
-		fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestHandler) {
+		fx.Invoke(func(lifecycle fx.Lifecycle, l sdk2.SendSmsRequestHandler) {
 			lifecycle.Append(fx.Hook{
 				OnStart: func(ctx goContext.Context) error {
 					_, err := l.Accept(req)
@@ -464,7 +465,7 @@ func TestSmppSendSmsRequestListener_Accept_when_the_request_is_canceled(t *testi
 					},
 				},
 			},
-				fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestHandler) {
+				fx.Invoke(func(lifecycle fx.Lifecycle, l sdk2.SendSmsRequestHandler) {
 					lifecycle.Append(fx.Hook{
 						OnStart: func(ctx goContext.Context) error {
 							response, err := l.Accept(req)
@@ -542,7 +543,7 @@ func TestSmppSendSmsRequestListener_Accept_when_the_request_has_been_sent_previo
 					},
 				},
 			},
-				fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestHandler) {
+				fx.Invoke(func(lifecycle fx.Lifecycle, l sdk2.SendSmsRequestHandler) {
 					lifecycle.Append(fx.Hook{
 						OnStart: func(ctx goContext.Context) error {
 							response, err := l.Accept(req)
@@ -617,7 +618,7 @@ func TestSmppSendSmsRequestListener_Accept_when_the_request_has_been_previous_pr
 					},
 				},
 			},
-				fx.Invoke(func(lifecycle fx.Lifecycle, l SendSmsRequestHandler) {
+				fx.Invoke(func(lifecycle fx.Lifecycle, l sdk2.SendSmsRequestHandler) {
 					lifecycle.Append(fx.Hook{
 						OnStart: func(ctx goContext.Context) error {
 							response, err := l.Accept(req)

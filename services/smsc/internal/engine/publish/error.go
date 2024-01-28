@@ -1,4 +1,4 @@
-package outbound
+package publish
 
 type ErrorType string
 

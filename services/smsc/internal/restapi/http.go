@@ -11,6 +11,7 @@ import (
 
 const (
 	httpValidationTitle   = "Request not compliant"
+	constraintViolationF  = "/problems/%s/constraint-violation"
 	httpValidationDetailF = `Request doesn't comply with Operation{"id"="%s"} schema`
 )
 
@@ -38,7 +39,7 @@ func sendRequestValidationResponse(c *gin.Context, statusCode int, operationId s
 		problem.Detail(err),
 		problem.Status(statusCode),
 		problem.Title(httpValidationTitle),
-		problem.Type(fmt.Sprintf("/problems/%s/constraint-violation", operationId)),
+		problem.Type(fmt.Sprintf(constraintViolationF, operationId)),
 		problem.Custom("operationId", operationId),
 	}
 	if opts != nil {

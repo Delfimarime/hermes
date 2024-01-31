@@ -22,7 +22,7 @@ type NewSmscRequest struct {
 	Settings    SmscSettingsRequest `json:"settings" binding:"required"`
 	Name        string              `json:"name,omitempty" binding:"required,gte=3,lte=50"`
 	Alias       string              `json:"alias,omitempty" binding:"required,gte=3,lte=20"`
-	Description string              `json:"description,omitempty" binding:"required,gte=1,lte=255"`
+	Description string              `json:"description,omitempty" binding:"required,gte=2,lte=255"`
 	Type        SmscType            `json:"type" binding:"required,oneof=TRANSMITTER TRANSCEIVER RECEIVER"`
 }
 

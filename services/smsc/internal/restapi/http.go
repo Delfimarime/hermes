@@ -13,7 +13,35 @@ const (
 	httpValidationTitle   = "Request not compliant"
 	constraintViolationF  = "/problems/%s/constraint-violation"
 	httpValidationDetailF = `Request doesn't comply with Operation{"id"="%s"} schema`
+
+	somethingWentWrongF       = "/problems/%s"
+	somethingWentWrongTitle   = "Something went wrong"
+	somethingWentWrongDetailF = `Cannot proceed with Operation{"id"="%s"}, the user isn't authorized to perform it`
 )
+
+func withAuthenticatedUser(f getAuthenticatedUser, c *gin.Context, operationId string, exec func(username string) error) {
+	if f == nil {
+		return
+	}
+	username := f(c)
+	if username == "" {
+		sendUnauthorizedResponse(c, operationId, "")
+		return
+	}
+	if err := exec(username); err != nil {
+		sendProblem(c, operationId, err)
+	}
+}
+
+func withRequestBody[T any](c *gin.Context, operationId string, exec func(*T) error) {
+	request := new(T)
+	if !bindAndValidate(c, request, operationId) {
+		return
+	}
+	if err := exec(request); err != nil {
+		sendProblem(c, operationId, err)
+	}
+}
 
 func bindAndValidate[T any](c *gin.Context, request *T, operationId string) bool {
 	if err := c.ShouldBindJSON(request); err != nil {
@@ -72,26 +100,25 @@ func sendProblem(c *gin.Context, operationId string, causedBy error) {
 		detail = t.GetDetail()
 		errorType = t.GetErrorType()
 		statusCode = t.GetStatusCode()
-	} else if detail == "" {
-		detail = causedBy.Error()
 	}
 	if detail == "" {
-		detail = "Cannot proceed with operation, the user isn't authorized to perform it"
+		detail = fmt.Sprintf(somethingWentWrongDetailF, operationId)
 	}
 	if statusCode < 400 || statusCode > 599 {
 		statusCode = http.StatusInternalServerError
 	}
 	if title == "" {
-		title = "Something went wrong"
+		title = somethingWentWrongTitle
 	}
-	err := fmt.Sprintf("/problems/%s", operationId)
+	determinedType := fmt.Sprintf(somethingWentWrongF, operationId)
 	if errorType != "" {
-		err += "/" + errorType
+		determinedType += "/" + errorType
 	}
 	_, _ = problem.New(
 		problem.Title(title),
 		problem.Detail(detail),
-		problem.Type(errorType),
+		problem.Type(determinedType),
 		problem.Status(statusCode),
+		problem.Custom("operationId", operationId),
 	).WriteTo(c.Writer)
 }

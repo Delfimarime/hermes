@@ -3,6 +3,7 @@ package restapi
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/delfimarime/hermes/services/smsc/pkg/restapi"
 	"github.com/gin-gonic/gin"
@@ -130,7 +131,7 @@ func doTestSmscApiNewWithSuccess(t *testing.T, arr []struct {
 		return
 	}
 	smscApi := &SmscApi{
-		service:              &TestSmsService{},
+		service:              &TestSmscService{},
 		getAuthenticatedUser: nil,
 	}
 	r := getGinEngine(smscApi)
@@ -807,7 +808,7 @@ func doTestSmscApiNewWithBadInput(t *testing.T, arr []struct {
 		return
 	}
 	smscApi := &SmscApi{
-		service: &TestSmsService{},
+		service: &TestSmscService{},
 		getAuthenticatedUser: func(c *gin.Context) string {
 			return "dmarime"
 		},
@@ -834,6 +835,67 @@ func doTestSmscApiNewWithBadInput(t *testing.T, arr []struct {
 	}
 }
 
+func TestSmscApi_New_when_smsc_service_has_error(t *testing.T) {
+	doTestSmscApiNewAndCatchError(t, []struct {
+		err  error
+		name string
+	}{
+		{
+			name: "errors.New",
+			err:  errors.New("<error/>"),
+		},
+	})
+}
+
+func doTestSmscApiNewAndCatchError(t *testing.T, arr []struct {
+	err  error
+	name string
+}) {
+	if arr == nil {
+		return
+	}
+	smscApi := &SmscApi{
+		service: &TestSmscService{},
+		getAuthenticatedUser: func(c *gin.Context) string {
+			return "dmarime"
+		},
+	}
+	r := getGinEngine(smscApi)
+	for _, definition := range arr {
+		smscApi.service.(*TestSmscService).err = definition.err
+		t.Run(definition.name, func(t *testing.T) {
+			smscRequest := restapi.NewSmscRequest{
+				PoweredBy: "raitonbl.com",
+				Settings: restapi.SmscSettingsRequest{
+					Host: restapi.Host{
+						Username: "admin",
+						Password: "admin",
+						Address:  "localhost:4000",
+					},
+				},
+				Name:        "raitonbl",
+				Alias:       "raitonbl",
+				Description: "<description/>",
+				Type:        restapi.TransmitterType,
+			}
+			requestData, _ := json.Marshal(smscRequest)
+			req, _ := http.NewRequest("POST", "/smscs", bytes.NewBuffer(requestData))
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+			require.Equal(t, 500, w.Code)
+			zalandoProblem := make(map[string]any)
+			if err := json.Unmarshal([]byte(w.Body.String()), &zalandoProblem); err != nil {
+				t.Fatal(err)
+			}
+			require.Equal(t, float64(500), zalandoProblem[zalandoStatusPath])
+			require.Equal(t, somethingWentWrongTitle, zalandoProblem[zalandoTitlePath])
+			require.Equal(t, AddSmscOperationId, zalandoProblem[zalandoOperationIdPath])
+			require.Equal(t, fmt.Sprintf(somethingWentWrongF, AddSmscOperationId), zalandoProblem[zalandoTypePath])
+			require.Equal(t, fmt.Sprintf(somethingWentWrongDetailF, AddSmscOperationId), zalandoProblem[zalandoDetailPath])
+		})
+	}
+}
+
 func stringWithCharset(length int) string {
 	charset := "aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ"
 	b := make([]byte, length)
@@ -843,11 +905,11 @@ func stringWithCharset(length int) string {
 	return string(b)
 }
 
-type TestSmsService struct {
+type TestSmscService struct {
 	err error
 }
 
-func (t *TestSmsService) Add(username string, request restapi.NewSmscRequest) (restapi.NewSmscResponse, error) {
+func (t *TestSmscService) Add(username string, request restapi.NewSmscRequest) (restapi.NewSmscResponse, error) {
 	if t.err != nil {
 		return restapi.NewSmscResponse{}, t.err
 	}

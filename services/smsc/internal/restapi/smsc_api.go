@@ -16,19 +16,16 @@ type SmscApi struct {
 }
 
 func (instance *SmscApi) New(c *gin.Context) {
-	username := instance.getAuthenticatedUser(c)
-	if username == "" {
-		sendUnauthorizedResponse(c, AddSmscOperationId, "")
-		return
-	}
-	request := &restapi.NewSmscRequest{}
-	if !bindAndValidate(c, request, AddSmscOperationId) {
-		return
-	}
-	response, err := instance.service.Add(username, *request)
-	if err != nil {
-		sendProblem(c, AddSmscOperationId, err)
-		return
-	}
-	c.JSON(200, response)
+	withAuthenticatedUser(instance.getAuthenticatedUser, c, AddSmscOperationId, func(username string) error {
+		withRequestBody[restapi.NewSmscRequest](c, AddSmscOperationId, func(request *restapi.NewSmscRequest) error {
+			response, err := instance.service.Add(username, *request)
+			if err != nil {
+				sendProblem(c, AddSmscOperationId, err)
+				return nil
+			}
+			c.JSON(200, response)
+			return nil
+		})
+		return nil
+	})
 }

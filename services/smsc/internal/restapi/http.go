@@ -4,17 +4,31 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"go.uber.org/zap"
 	"net/http"
 	"schneider.vip/problem"
 )
 
+const (
+	httpValidationDetail = "Request doesn't comply with defined schema"
+)
+
 func bindAndValidate[T any](c *gin.Context, request *T, operationId string) bool {
-	validate, _ := c.Get("validator")
-	if err := c.ShouldBindJSON(&request); err != nil {
-		sendRequestValidationResponse(c, http.StatusBadRequest, operationId, err.Error())
+	if err := c.ShouldBindJSON(request); err != nil {
+		zap.L().Error("Cannot bind JSON from gin.Context",
+			zap.String("operationId", operationId),
+			zap.String("uri", c.Request.RequestURI),
+			zap.Error(err),
+		)
+		sendRequestValidationResponse(c, http.StatusBadRequest, operationId, httpValidationDetail)
 		return false
 	}
-	if err := validate.(*validator.Validate).Struct(&request); err != nil {
+	validate := validator.New()
+	if err := validate.Struct(*request); err != nil {
+		errors := err.(validator.ValidationErrors)
+		for index, each := range errors {
+			fmt.Println(index, ".", each)
+		}
 		sendRequestValidationResponse(c, http.StatusUnprocessableEntity, operationId, err.Error())
 		return false
 	}
@@ -25,7 +39,7 @@ func sendRequestValidationResponse(c *gin.Context, statusCode int, operationId s
 	_, _ = problem.New(
 		problem.Detail(err),
 		problem.Status(statusCode),
-		problem.Title("Request doesn't comply with defined schema"),
+		problem.Title(httpValidationDetail),
 		problem.Type(fmt.Sprintf("/problems/%s/constraint-violation", operationId)),
 	).WriteTo(c.Writer)
 }

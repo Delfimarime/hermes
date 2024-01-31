@@ -13,23 +13,21 @@ const (
 )
 
 type SmscApi struct {
-	service         sdk.SmscService
-	securityContext SecurityContext
+	service              sdk.SmscService
+	getAuthenticatedUser getAuthenticatedUser
 }
 
 func (instance *SmscApi) New(c *gin.Context) {
-	username := instance.securityContext.GetUsernameFrom(c)
-	if username != "" {
+	username := instance.getAuthenticatedUser(c)
+	if username == "" {
 		sendUnauthorizedResponse(c, AddSmscOperationId, "")
 		return
 	}
-	var request *restapi.NewSmscRequest
+	request := &restapi.NewSmscRequest{}
 	if !bindAndValidate(c, request, AddSmscOperationId) {
 		return
 	}
-	if request.Type != restapi.ReceiverType &&
-		request.Type != restapi.TransmitterType &&
-		request.Type != restapi.TransceiverType {
+	if !anyOf(request.Type, restapi.ReceiverType, restapi.TransmitterType, restapi.TransceiverType) {
 		sendRequestValidationResponse(c, http.StatusUnprocessableEntity, AddSmscOperationId,
 			fmt.Sprintf("$.type must be oneOf %v", []string{string(restapi.ReceiverType),
 				string(restapi.TransmitterType), string(restapi.TransceiverType)}))

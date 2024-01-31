@@ -15,28 +15,28 @@ type NewSmscResponse struct {
 	Id            string     `json:"id" binding:"required"`
 	CreatedAt     time.Time  `json:"created_at" binding:"required"`
 	CreatedBy     string     `json:"created_by,omitempty" binding:"required"`
-	LastUpdatedAt *time.Time `json:"last_updated_at"`
+	LastUpdatedAt *time.Time `json:"last_updated_at,omitempty"`
 	LastUpdatedBy string     `json:"last_updated_by,omitempty"`
 }
 
 type NewSmscRequest struct {
 	PoweredBy   string              `json:"powered_by,omitempty" binding:"max=45"`
-	Type        SmscType            `json:"type" binding:"min=8,max=11"`
+	Type        SmscType            `json:"type" binding:"required" validator:"min=8,max=11"`
 	Settings    SmscSettingsRequest `json:"settings" binding:"required"`
-	Name        string              `json:"name,omitempty" binding:"required,min=3,max=50"`
-	Alias       string              `json:"alias,omitempty" binding:"required,min=3,max=20"`
-	Description string              `json:"description,omitempty" binding:"required,min=1,max=255"`
+	Name        string              `json:"name,omitempty" binding:"required" validator:"min=3,max=50"`
+	Alias       string              `json:"alias,omitempty" binding:"required" validator:"min=3,max=20"`
+	Description string              `json:"description,omitempty" binding:"required" validator:"min=1,max=255"`
 }
 
 type SmscSettingsRequest struct {
-	SourceAddr  string    `json:"source_address,omitempty" binding:"hostname_port"`
+	Bind        *Bind     `json:"bind,omitempty"`
+	Merge       *Merge    `json:"merge,omitempty"`
+	Enquire     *Enquire  `json:"enquire,omitempty"`
+	Response    *Response `json:"response,omitempty"`
+	Delivery    *Delivery `json:"delivery,omitempty"`
 	ServiceType string    `json:"service_type,omitempty"`
 	Host        Host      `json:"host" binding:"required"`
-	Bind        *Bind     `json:"bind"`
-	Merge       *Merge    `json:"merge"`
-	Enquire     *Enquire  `json:"enquire"`
-	Response    *Response `json:"response"`
-	Delivery    *Delivery `json:"delivery"`
+	SourceAddr  string    `json:"source_address,omitempty" validator:"hostname_port"`
 }
 
 type Delivery struct {
@@ -50,19 +50,19 @@ type Host struct {
 }
 
 type Bind struct {
-	Timeout int64 `json:"timeout" binding:"min:1000"`
+	Timeout int64 `json:"timeout" binding:"required" validator:"min:1000"`
 }
 
 type Enquire struct {
-	Link        int64 `json:"link" binding:"min:1000"`
-	LinkTimeout int64 `json:"link_timeout" binding:"min:1000"`
+	Link        int64 `json:"link" binding:"required" validator:"min:1000"`
+	LinkTimeout int64 `json:"link_timeout" binding:"required" validator:"min:1000"`
 }
 
 type Response struct {
-	Timeout int64 `json:"timeout" binding:"min:1000"`
+	Timeout int64 `json:"timeout" binding:"required" validator:"min:1000"`
 }
 
 type Merge struct {
-	Interval        int64 `json:"interval" binding:"min:1000"`
-	CleanupInterval int64 `json:"cleanup_interval" binding:"min:1000"`
+	Interval        int64 `json:"interval" binding:"required" validator:"min:1000"`
+	CleanupInterval int64 `json:"cleanup_interval" binding:"required" validator:"min:1000"`
 }

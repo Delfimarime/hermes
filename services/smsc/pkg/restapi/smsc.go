@@ -12,20 +12,18 @@ type SmscType string
 
 type NewSmscResponse struct {
 	NewSmscRequest
-	Id            string     `json:"id" binding:"required"`
-	CreatedAt     time.Time  `json:"created_at" binding:"required"`
-	CreatedBy     string     `json:"created_by,omitempty" binding:"required"`
-	LastUpdatedAt *time.Time `json:"last_updated_at,omitempty"`
-	LastUpdatedBy string     `json:"last_updated_by,omitempty"`
+	Id        string    `json:"id" binding:"required"`
+	CreatedAt time.Time `json:"created_at" binding:"required"`
+	CreatedBy string    `json:"created_by,omitempty" binding:"required"`
 }
 
 type NewSmscRequest struct {
 	PoweredBy   string              `json:"powered_by,omitempty" binding:"omitempty,lte=45"`
-	Type        SmscType            `json:"type" binding:"required,gte=8,lte=11"`
 	Settings    SmscSettingsRequest `json:"settings" binding:"required"`
 	Name        string              `json:"name,omitempty" binding:"required,gte=3,lte=50"`
 	Alias       string              `json:"alias,omitempty" binding:"required,gte=3,lte=20"`
 	Description string              `json:"description,omitempty" binding:"required,gte=1,lte=255"`
+	Type        SmscType            `json:"type" binding:"required,oneof=TRANSMITTER TRANSCEIVER RECEIVER"`
 }
 
 type SmscSettingsRequest struct {

@@ -1,6 +1,6 @@
 package restapi
 
-func anyOf(value any, from ...any) bool {
+func AnyOf(value any, from ...any) bool {
 	if from == nil {
 		return false
 	}

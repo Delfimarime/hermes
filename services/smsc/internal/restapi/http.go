@@ -6,12 +6,12 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 	"net/http"
-	"reflect"
 	"schneider.vip/problem"
 )
 
 const (
-	httpValidationDetail = "Request doesn't comply with defined schema"
+	httpValidationTitle   = "Request not compliant"
+	httpValidationDetailF = `Request doesn't comply with Operation{"id"="%s"} schema`
 )
 
 func bindAndValidate[T any](c *gin.Context, request *T, operationId string) bool {
@@ -21,31 +21,30 @@ func bindAndValidate[T any](c *gin.Context, request *T, operationId string) bool
 			zap.String("uri", c.Request.RequestURI),
 			zap.Error(err),
 		)
-		fmt.Println(err, reflect.TypeOf(err).PkgPath(), reflect.TypeOf(err).Name())
-		sendRequestValidationResponse(c, http.StatusBadRequest, operationId, httpValidationDetail)
-		return false
-	}
-	validate := validator.New()
-	fmt.Println("A", request)
-	fmt.Println("B", validate.Struct(*request))
-	if err := validate.Struct(*request); err != nil {
-		errors := err.(validator.ValidationErrors)
-		for index, each := range errors {
-			fmt.Println(index, ".", each)
+		if _, isValidationError := err.(validator.ValidationErrors); isValidationError {
+			sendRequestValidationResponse(c, http.StatusUnprocessableEntity, operationId,
+				fmt.Sprintf(httpValidationDetailF, operationId))
+		} else {
+			sendRequestValidationResponse(c, http.StatusBadRequest, operationId,
+				fmt.Sprintf(httpValidationDetailF, operationId))
 		}
-		sendRequestValidationResponse(c, http.StatusUnprocessableEntity, operationId, err.Error())
 		return false
 	}
 	return true
 }
 
-func sendRequestValidationResponse(c *gin.Context, statusCode int, operationId string, err string) {
-	_, _ = problem.New(
+func sendRequestValidationResponse(c *gin.Context, statusCode int, operationId string, err string, opts ...problem.Option) {
+	arr := []problem.Option{
 		problem.Detail(err),
 		problem.Status(statusCode),
-		problem.Title(httpValidationDetail),
+		problem.Title(httpValidationTitle),
 		problem.Type(fmt.Sprintf("/problems/%s/constraint-violation", operationId)),
-	).WriteTo(c.Writer)
+		problem.Custom("operationId", operationId),
+	}
+	if opts != nil {
+		arr = append(arr, opts...)
+	}
+	_, _ = problem.New(arr...).WriteTo(c.Writer)
 }
 
 func sendUnauthorizedResponse(c *gin.Context, operationId string, err string) {
@@ -58,6 +57,7 @@ func sendUnauthorizedResponse(c *gin.Context, operationId string, err string) {
 		problem.Status(http.StatusForbidden),
 		problem.Title("Unauthorized Access"),
 		problem.Type(fmt.Sprintf("/problems/%s/unauthorized-access", operationId)),
+		problem.Custom("operationId", operationId),
 	).WriteTo(c.Writer)
 }
 

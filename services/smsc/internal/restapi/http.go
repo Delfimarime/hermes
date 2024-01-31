@@ -6,6 +6,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 	"net/http"
+	"reflect"
 	"schneider.vip/problem"
 )
 
@@ -20,10 +21,13 @@ func bindAndValidate[T any](c *gin.Context, request *T, operationId string) bool
 			zap.String("uri", c.Request.RequestURI),
 			zap.Error(err),
 		)
+		fmt.Println(err, reflect.TypeOf(err).PkgPath(), reflect.TypeOf(err).Name())
 		sendRequestValidationResponse(c, http.StatusBadRequest, operationId, httpValidationDetail)
 		return false
 	}
 	validate := validator.New()
+	fmt.Println("A", request)
+	fmt.Println("B", validate.Struct(*request))
 	if err := validate.Struct(*request); err != nil {
 		errors := err.(validator.ValidationErrors)
 		for index, each := range errors {

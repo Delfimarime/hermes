@@ -1,4 +1,4 @@
-package restapi
+package service
 
 type TransactionProblem interface {
 	error

@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 const (
 	ReceiverType    = "RECEIVER"
 	TransmitterType = "TRANSMITTER"
@@ -14,6 +16,8 @@ type Smpp struct {
 	Type        string
 	Alias       string
 	Settings    Settings
+	CreatedBy   string
+	CreatedAt   time.Time
 }
 
 type Settings struct {

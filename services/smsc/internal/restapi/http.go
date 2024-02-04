@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"fmt"
+	"github.com/delfimarime/hermes/services/smsc/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
@@ -95,7 +96,7 @@ func sendProblem(c *gin.Context, operationId string, causedBy error) {
 	detail := ""
 	errorType := ""
 	statusCode := 0
-	if t, isTransactionProblem := causedBy.(TransactionProblem); isTransactionProblem {
+	if t, isTransactionProblem := causedBy.(service.TransactionProblem); isTransactionProblem {
 		title = t.GetTitle()
 		detail = t.GetDetail()
 		errorType = t.GetErrorType()

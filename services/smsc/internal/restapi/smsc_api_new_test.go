@@ -347,7 +347,7 @@ func TestSmscApi_New_when_description_is_not_valid(t *testing.T) {
 			},
 		},
 		{
-			name: "len(description)==21",
+			name: "len(description)==256",
 			request: restapi.NewSmscRequest{
 				UpdateSmscRequest: restapi.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",

@@ -20,31 +20,12 @@ type EditByTestConfiguration struct {
 	AssertWith func(*testing.T, *httptest.ResponseRecorder, string, restapi.UpdateSmscRequest) error
 }
 
-func TestSmscApi_EditById_and_expect_success(t *testing.T) {
-	factory := func(f func(request *restapi.UpdateSmscRequest)) restapi.UpdateSmscRequest {
-		r := &restapi.UpdateSmscRequest{
-			PoweredBy: "raitonbl.com",
-			Settings: restapi.SmscSettingsRequest{
-				Host: restapi.Host{
-					Username: "admin",
-					Password: "admin",
-					Address:  "localhost:4000",
-				},
-			},
-			Name:        "raitonbl",
-			Description: "<description/>",
-			Type:        restapi.TransmitterType,
-		}
-		if f != nil {
-			f(r)
-		}
-		return *r
-	}
-	params := []EditByTestConfiguration{
+func TestSmscApi_EditById(t *testing.T) {
+	executeEditByIdTest(t, assertUpdateSmscResponseWhenOK, []EditByTestConfiguration{
 		{
 			name:   "type=transmitter",
 			target: "0",
-			request: factory(func(r *restapi.UpdateSmscRequest) {
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
 				r.Type = restapi.TransmitterType
 			}),
 			AssertWith: nil,
@@ -52,7 +33,7 @@ func TestSmscApi_EditById_and_expect_success(t *testing.T) {
 		{
 			name:   "type=receiver",
 			target: "0",
-			request: factory(func(r *restapi.UpdateSmscRequest) {
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
 				r.Type = restapi.ReceiverType
 			}),
 			AssertWith: nil,
@@ -60,7 +41,7 @@ func TestSmscApi_EditById_and_expect_success(t *testing.T) {
 		{
 			name:   "type=transceiver",
 			target: "0",
-			request: factory(func(r *restapi.UpdateSmscRequest) {
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
 				r.Type = restapi.TransceiverType
 			}),
 			AssertWith: nil,
@@ -68,7 +49,7 @@ func TestSmscApi_EditById_and_expect_success(t *testing.T) {
 		{
 			name:   "powered_by=nil",
 			target: "0",
-			request: factory(func(r *restapi.UpdateSmscRequest) {
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
 				r.PoweredBy = ""
 			}),
 			AssertWith: nil,
@@ -76,7 +57,7 @@ func TestSmscApi_EditById_and_expect_success(t *testing.T) {
 		{
 			name:   "powered_by=<value>",
 			target: "0",
-			request: factory(func(r *restapi.UpdateSmscRequest) {
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
 				r.PoweredBy = "<value>"
 			}),
 			AssertWith: nil,
@@ -84,16 +65,325 @@ func TestSmscApi_EditById_and_expect_success(t *testing.T) {
 		{
 			name:   "settings.bind.timeout=1000",
 			target: "0",
-			request: factory(func(r *restapi.UpdateSmscRequest) {
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
 				r.Settings.Bind = &restapi.Bind{
 					Timeout: 1000,
 				}
 			}),
 			AssertWith: nil,
 		},
-	}
-	executeEditByIdTest(t, assertUpdateSmscResponseWhenOK, params)
+	})
 
+}
+
+func TestSmscApi_EditById_when_type_is_not_valid(t *testing.T) {
+	executeEditByIdTest(t, assertUpdateSmscResponseWhenBadInput, []EditByTestConfiguration{
+		{
+			name:   "type=nil",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Type = ""
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "type=<value>",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Type = "<value>"
+			}),
+			AssertWith: nil,
+		},
+	})
+
+}
+
+func TestSmscApi_EditById_when_name_is_not_valid(t *testing.T) {
+	executeEditByIdTest(t, assertUpdateSmscResponseWhenBadInput, []EditByTestConfiguration{
+		{
+			name:   "name=nil",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Name = ""
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "len(name)==2",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Name = stringWithCharset(2)
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "len(name)==51",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Name = stringWithCharset(51)
+			}),
+			AssertWith: nil,
+		},
+	})
+
+}
+
+func TestSmscApi_EditById_when_description_is_not_valid(t *testing.T) {
+	executeEditByIdTest(t, assertUpdateSmscResponseWhenBadInput, []EditByTestConfiguration{
+		{
+			name:   "description=nil",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Description = ""
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "len(description)==1",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Description = stringWithCharset(1)
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "len(description)==256",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Name = stringWithCharset(256)
+			}),
+			AssertWith: nil,
+		},
+	})
+
+}
+
+func TestSmscApi_EditById_when_source_addr_from_settings_is_not_valid(t *testing.T) {
+	executeEditByIdTest(t, assertUpdateSmscResponseWhenBadInput, []EditByTestConfiguration{
+		{
+			name:   "settings.source_address=google.com",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.SourceAddr = "google.com"
+			}),
+			AssertWith: nil,
+		},
+	})
+
+}
+
+func TestSmscApi_EditById_when_host_from_settings_is_not_valid(t *testing.T) {
+	executeEditByIdTest(t, assertUpdateSmscResponseWhenBadInput, []EditByTestConfiguration{
+		{
+			name:   "settings.host=nil",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Host = restapi.Host{}
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "host.username=nil",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Host.Username = ""
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "host.password=nil",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Host.Password = ""
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "host.address=nil",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Host.Address = ""
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "host.address not hostname_port",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Host.Address = "google.com"
+			}),
+			AssertWith: nil,
+		},
+	})
+
+}
+
+func TestSmscApi_EditById_when_bind_from_settings_is_not_valid(t *testing.T) {
+	executeEditByIdTest(t, assertUpdateSmscResponseWhenBadInput, []EditByTestConfiguration{
+		{
+			name:   "bind.timeout=999",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Bind = &restapi.Bind{
+					Timeout: 999,
+				}
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "bind.timeout=0",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Bind = &restapi.Bind{
+					Timeout: 0,
+				}
+			}),
+			AssertWith: nil,
+		},
+	})
+}
+
+func TestSmscApi_EditById_when_enquire_from_settings_is_not_valid(t *testing.T) {
+	executeEditByIdTest(t, assertUpdateSmscResponseWhenBadInput, []EditByTestConfiguration{
+		{
+			name:   "enquiry.link=999",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Enquire = &restapi.Enquire{
+					Link:        999,
+					LinkTimeout: 1000,
+				}
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "enquiry.link=0",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Enquire = &restapi.Enquire{
+					Link:        0,
+					LinkTimeout: 1000,
+				}
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "enquiry.link_timeout=999",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Enquire = &restapi.Enquire{
+					Link:        1000,
+					LinkTimeout: 999,
+				}
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "enquiry.link_timeout=0",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Enquire = &restapi.Enquire{
+					Link:        1000,
+					LinkTimeout: 999,
+				}
+			}),
+			AssertWith: nil,
+		},
+	})
+}
+
+func TestSmscApi_EditById_when_response_from_settings_is_not_valid(t *testing.T) {
+	executeEditByIdTest(t, assertUpdateSmscResponseWhenBadInput, []EditByTestConfiguration{
+		{
+			name:   "response.timeout=999",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Response = &restapi.Response{
+					Timeout: 999,
+				}
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "response.timeout=0",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Response = &restapi.Response{
+					Timeout: 0,
+				}
+			}),
+			AssertWith: nil,
+		},
+	})
+}
+
+func TestSmscApi_EditById_when_merge_from_settings_is_not_valid(t *testing.T) {
+	executeEditByIdTest(t, assertUpdateSmscResponseWhenBadInput, []EditByTestConfiguration{
+		{
+			name:   "merge.interval=999",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Merge = &restapi.Merge{
+					Interval:        999,
+					CleanupInterval: 1000,
+				}
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "merge.interval=0",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Merge = &restapi.Merge{
+					Interval:        0,
+					CleanupInterval: 1000,
+				}
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "merge.cleanup_interval=999",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Merge = &restapi.Merge{
+					Interval:        1000,
+					CleanupInterval: 999,
+				}
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "merge.cleanup_interval=0",
+			target: "0",
+			request: createUpdateSmscRequest(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Merge = &restapi.Merge{
+					Interval:        1000,
+					CleanupInterval: 0,
+				}
+			}),
+			AssertWith: nil,
+		},
+	})
+}
+
+func createUpdateSmscRequest(f func(request *restapi.UpdateSmscRequest)) restapi.UpdateSmscRequest {
+	r := &restapi.UpdateSmscRequest{
+		PoweredBy: "raitonbl.com",
+		Settings: restapi.SmscSettingsRequest{
+			Host: restapi.Host{
+				Username: "admin",
+				Password: "admin",
+				Address:  "localhost:4000",
+			},
+		},
+		Name:        "raitonbl",
+		Description: "<description/>",
+		Type:        restapi.TransmitterType,
+	}
+	if f != nil {
+		f(r)
+	}
+	return *r
 }
 
 func executeEditByIdTest(t *testing.T, assertWith func(*testing.T, *httptest.ResponseRecorder, string, restapi.UpdateSmscRequest) error, arr []EditByTestConfiguration) {
@@ -135,9 +425,9 @@ func assertUpdateSmscResponseWhenBadInput(t *testing.T, w *httptest.ResponseReco
 	}
 	require.Equal(t, float64(422), zalandoProblem[zalandoStatusPath])
 	require.Equal(t, httpValidationTitle, zalandoProblem[zalandoTitlePath])
-	require.Equal(t, AddSmscOperationId, zalandoProblem[zalandoOperationIdPath])
+	require.Equal(t, EditSmscOperationId, zalandoProblem[zalandoOperationIdPath])
 	require.Equal(t, fmt.Sprintf(constraintViolationF, EditSmscOperationId), zalandoProblem[zalandoTypePath])
-	require.Equal(t, fmt.Sprintf(httpValidationDetailF, EditSmscOperationId), zalandoProblem[zalandoDetailPath])
+	require.Equal(t, fmt.Sprintf(httpValidationDetailWithLocationF, "body", EditSmscOperationId), zalandoProblem[zalandoDetailPath])
 	return nil
 }
 

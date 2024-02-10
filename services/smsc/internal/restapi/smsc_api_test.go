@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/delfimarime/hermes/services/smsc/pkg/restapi"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"math/rand"
@@ -131,18 +130,14 @@ func doTestSmscApiNewWithSuccess(t *testing.T, arr []struct {
 		return
 	}
 	smscApi := &SmscApi{
-		service:              &TestSmscService{},
-		getAuthenticatedUser: nil,
+		service: &TestSmscService{},
 	}
-	r := getGinEngine(smscApi)
 	for _, definition := range arr {
 		username := "dmarime"
 		if definition.username != "" {
 			username = definition.username
 		}
-		smscApi.getAuthenticatedUser = func(c *gin.Context) string {
-			return username
-		}
+		r := getGinEngine(&HardCodedAuthenticator{username: username}, smscApi)
 		t.Run(definition.name, func(t *testing.T) {
 			smscRequest := definition.request
 			requestData, _ := json.Marshal(smscRequest)
@@ -809,11 +804,8 @@ func doTestSmscApiNewWithBadInput(t *testing.T, arr []struct {
 	}
 	smscApi := &SmscApi{
 		service: &TestSmscService{},
-		getAuthenticatedUser: func(c *gin.Context) string {
-			return "dmarime"
-		},
 	}
-	r := getGinEngine(smscApi)
+	r := getGinEngine(&HardCodedAuthenticator{username: "dmarime"}, smscApi)
 	for _, definition := range arr {
 		t.Run(definition.name, func(t *testing.T) {
 			smscRequest := definition.request
@@ -822,6 +814,7 @@ func doTestSmscApiNewWithBadInput(t *testing.T, arr []struct {
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
 			require.Equal(t, 422, w.Code)
+			fmt.Println(w.Body.String())
 			zalandoProblem := make(map[string]any)
 			if err := json.Unmarshal([]byte(w.Body.String()), &zalandoProblem); err != nil {
 				t.Fatal(err)
@@ -856,11 +849,8 @@ func doTestSmscApiNewAndCatchError(t *testing.T, arr []struct {
 	}
 	smscApi := &SmscApi{
 		service: &TestSmscService{},
-		getAuthenticatedUser: func(c *gin.Context) string {
-			return "dmarime"
-		},
 	}
-	r := getGinEngine(smscApi)
+	r := getGinEngine(&HardCodedAuthenticator{username: "dmarime"}, smscApi)
 	for _, definition := range arr {
 		smscApi.service.(*TestSmscService).err = definition.err
 		t.Run(definition.name, func(t *testing.T) {

@@ -6,26 +6,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	AddSmscOperationId = "addSmsc"
-)
-
 type SmscApi struct {
-	service              sdk.SmscService
-	getAuthenticatedUser getAuthenticatedUser
+	service sdk.SmscService
 }
 
-func (instance *SmscApi) New(c *gin.Context) {
-	withAuthenticatedUser(instance.getAuthenticatedUser, c, AddSmscOperationId, func(username string) error {
-		withRequestBody[restapi.NewSmscRequest](c, AddSmscOperationId, func(request *restapi.NewSmscRequest) error {
-			response, err := instance.service.Add(username, *request)
-			if err != nil {
-				sendProblem(c, AddSmscOperationId, err)
-				return nil
-			}
-			c.JSON(200, response)
-			return nil
-		})
-		return nil
-	})
+func (instance *SmscApi) New(operationId string, username string, c *gin.Context) error {
+	request, err := readBody[restapi.NewSmscRequest](operationId, c)
+	if err != nil {
+		return err
+	}
+	response, err := instance.service.Add(username, *request)
+	if err != nil {
+		return err
+	}
+	c.JSON(200, response)
+	return nil
 }

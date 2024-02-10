@@ -18,49 +18,28 @@ const (
 	somethingWentWrongF       = "/problems/%s"
 	somethingWentWrongTitle   = "Something went wrong"
 	somethingWentWrongDetailF = `Cannot proceed with Operation{"id"="%s"}, the user isn't authorized to perform it`
+
+	UnauthorizedAccessTitle       = "Unauthorized Access"
+	UnauthenticatedResponseDetail = "Cannot proceed with operation, the user and/or client cannot be determined"
+	UnauthorizedResponseDetail    = "Cannot proceed with operation, the user isn't authorized to perform it"
 )
 
-func withAuthenticatedUser(f getAuthenticatedUser, c *gin.Context, operationId string, exec func(username string) error) {
-	if f == nil {
-		return
-	}
-	username := f(c)
-	if username == "" {
-		sendUnauthorizedResponse(c, operationId, "")
-		return
-	}
-	if err := exec(username); err != nil {
-		sendProblem(c, operationId, err)
-	}
-}
-
-func withRequestBody[T any](c *gin.Context, operationId string, exec func(*T) error) {
+func readBody[T any](operationId string, c *gin.Context) (*T, error) {
 	request := new(T)
-	if !bindAndValidate(c, request, operationId) {
-		return
-	}
-	if err := exec(request); err != nil {
-		sendProblem(c, operationId, err)
-	}
+	err := bind[T](operationId, c, request)
+	return request, err
 }
 
-func bindAndValidate[T any](c *gin.Context, request *T, operationId string) bool {
-	if err := c.ShouldBindJSON(request); err != nil {
+func bind[T any](operationId string, c *gin.Context, request *T) error {
+	err := c.ShouldBindJSON(request)
+	if err != nil {
 		zap.L().Error("Cannot bind JSON from gin.Context",
 			zap.String("operationId", operationId),
 			zap.String("uri", c.Request.RequestURI),
 			zap.Error(err),
 		)
-		if _, isValidationError := err.(validator.ValidationErrors); isValidationError {
-			sendRequestValidationResponse(c, http.StatusUnprocessableEntity, operationId,
-				fmt.Sprintf(httpValidationDetailF, operationId))
-		} else {
-			sendRequestValidationResponse(c, http.StatusBadRequest, operationId,
-				fmt.Sprintf(httpValidationDetailF, operationId))
-		}
-		return false
 	}
-	return true
+	return err
 }
 
 func sendRequestValidationResponse(c *gin.Context, statusCode int, operationId string, err string, opts ...problem.Option) {
@@ -80,41 +59,54 @@ func sendRequestValidationResponse(c *gin.Context, statusCode int, operationId s
 func sendUnauthorizedResponse(c *gin.Context, operationId string, err string) {
 	detail := err
 	if detail == "" {
-		detail = "Cannot proceed with operation, the user isn't authorized to perform it"
+		detail = UnauthorizedResponseDetail
 	}
 	_, _ = problem.New(
 		problem.Detail(detail),
 		problem.Status(http.StatusForbidden),
-		problem.Title("Unauthorized Access"),
+		problem.Title(UnauthorizedAccessTitle),
 		problem.Type(fmt.Sprintf("/problems/%s/unauthorized-access", operationId)),
 		problem.Custom("operationId", operationId),
 	).WriteTo(c.Writer)
 }
 
+func setUnauthenticatedResponse(operationId string, c *gin.Context) {
+	_, _ = problem.New(
+		problem.Status(http.StatusUnauthorized),
+		problem.Title(UnauthorizedAccessTitle),
+		problem.Detail(UnauthenticatedResponseDetail),
+		problem.Type(fmt.Sprintf("/problems/%s/not-authenticated", operationId)),
+		problem.Custom("operationId", operationId),
+	).WriteTo(c.Writer)
+}
 func sendProblem(c *gin.Context, operationId string, causedBy error) {
-	title := ""
-	detail := ""
-	errorType := ""
-	statusCode := 0
-	if t, isTransactionProblem := causedBy.(service.TransactionProblem); isTransactionProblem {
-		title = t.GetTitle()
-		detail = t.GetDetail()
-		errorType = t.GetErrorType()
-		statusCode = t.GetStatusCode()
+	var (
+		title      = somethingWentWrongTitle
+		detail     = fmt.Sprintf(somethingWentWrongDetailF, operationId)
+		errorType  = ""
+		statusCode = http.StatusInternalServerError
+	)
+
+	switch t := causedBy.(type) {
+	case service.TransactionProblem:
+		title, detail, errorType, statusCode = t.GetTitle(), t.GetDetail(), t.GetErrorType(), t.GetStatusCode()
+	case validator.ValidationErrors:
+		sendRequestValidationResponse(c, http.StatusUnprocessableEntity, operationId, fmt.Sprintf(httpValidationDetailF, operationId))
+		return
+	case *validator.InvalidValidationError:
+		sendRequestValidationResponse(c, http.StatusBadRequest, operationId, fmt.Sprintf(httpValidationDetailF, operationId))
+		return
 	}
-	if detail == "" {
-		detail = fmt.Sprintf(somethingWentWrongDetailF, operationId)
-	}
+
 	if statusCode < 400 || statusCode > 599 {
 		statusCode = http.StatusInternalServerError
 	}
-	if title == "" {
-		title = somethingWentWrongTitle
-	}
+
 	determinedType := fmt.Sprintf(somethingWentWrongF, operationId)
 	if errorType != "" {
 		determinedType += "/" + errorType
 	}
+
 	_, _ = problem.New(
 		problem.Title(title),
 		problem.Detail(detail),

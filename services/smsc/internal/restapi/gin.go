@@ -3,12 +3,20 @@ package restapi
 import "github.com/gin-gonic/gin"
 
 const (
-	AddSmscOperationId = "addSmsc"
+	AddSmscOperationId       = "AddSmsc"
+	RemoveSmscOperationId    = "RemoveSmscById"
+	EditSmscOperationId      = "EditSmscById"
+	EditSmscStateOperationId = "EditSmscStateById"
+	EditSmscSettingsId       = "EidSmscSettingsById"
 )
 
 func getGinEngine(authenticator Authenticator, smscApi *SmscApi) *gin.Engine {
 	r := gin.Default()
 	r.POST("/smscs", withUser(AddSmscOperationId, authenticator, smscApi.New))
+	r.PUT("/smscs/:id", withUser(EditSmscOperationId, authenticator, smscApi.EditById))
+	r.DELETE("/smscs/:id", withUser(RemoveSmscOperationId, authenticator, smscApi.RemoveById))
+	r.PUT("/smscs/:id/state", withUser(EditSmscStateOperationId, authenticator, smscApi.EditStateById))
+	r.POST("/smscs/:id/settings", withUser(EditSmscSettingsId, authenticator, smscApi.EditSettingsById))
 	return r
 }
 

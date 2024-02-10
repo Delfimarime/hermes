@@ -10,6 +10,11 @@ const (
 
 type SmscType string
 
+type NewSmscRequest struct {
+	UpdateSmscRequest
+	Alias string `json:"alias,omitempty" binding:"required,gte=3,lte=20"`
+}
+
 type NewSmscResponse struct {
 	NewSmscRequest
 	Id        string    `json:"id" binding:"required"`
@@ -17,14 +22,15 @@ type NewSmscResponse struct {
 	CreatedBy string    `json:"created_by,omitempty" binding:"required"`
 }
 
-type NewSmscRequest struct {
-	PoweredBy   string              `json:"powered_by,omitempty" binding:"omitempty,lte=45"`
+type UpdateSmscRequest struct {
 	Settings    SmscSettingsRequest `json:"settings" binding:"required"`
 	Name        string              `json:"name,omitempty" binding:"required,gte=3,lte=50"`
-	Alias       string              `json:"alias,omitempty" binding:"required,gte=3,lte=20"`
+	PoweredBy   string              `json:"powered_by,omitempty" binding:"omitempty,lte=45"`
 	Description string              `json:"description,omitempty" binding:"required,gte=2,lte=255"`
 	Type        SmscType            `json:"type" binding:"required,oneof=TRANSMITTER TRANSCEIVER RECEIVER"`
 }
+
+type UpdateSmscResponse NewSmscResponse
 
 type SmscSettingsRequest struct {
 	Bind        *Bind     `json:"bind,omitempty"`
@@ -63,4 +69,10 @@ type Response struct {
 type Merge struct {
 	Interval        int64 `json:"interval" binding:"required,gte=1000"`
 	CleanupInterval int64 `json:"cleanup_interval" binding:"required,gte=1000"`
+}
+
+type UpdateSmscSettingsRequest SmscSettingsRequest
+
+type UpdateSmscState struct {
+	Value string `json:"value" binding:"required,oneof=ACTIVATED,DEACTIVATED"`
 }

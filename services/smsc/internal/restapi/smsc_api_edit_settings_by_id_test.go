@@ -39,7 +39,6 @@ func TestSmscApi_EditSettingsById(t *testing.T) {
 			AssertWith: nil,
 		},
 	})
-
 }
 
 func TestSmscApi_EditSettingsById_when_source_addr_from_settings_is_not_valid(t *testing.T) {
@@ -296,7 +295,7 @@ func executeEditSettingsByIdTest(t *testing.T, assertWith func(*testing.T, *http
 }
 
 func assertUpdateSmscSettingsResponseWhenBadInput(t *testing.T, w *httptest.ResponseRecorder, username string, settings restapi.UpdateSmscSettingsRequest) error {
-	return createAssertResponseWhenBadInput(EditSmscSettingsId)(t, w, username, settings)
+	return createAssertResponseWhenBadInput[restapi.UpdateSmscSettingsRequest](EditSmscSettingsId)(t, w, username, settings)
 }
 
 func assertUpdateSmscResponseWhenNoContent(t *testing.T, w *httptest.ResponseRecorder, _ string, _ restapi.UpdateSmscSettingsRequest) error {
@@ -305,8 +304,8 @@ func assertUpdateSmscResponseWhenNoContent(t *testing.T, w *httptest.ResponseRec
 	return nil
 }
 
-func createAssertResponseWhenBadInput(operationId string) func(t *testing.T, w *httptest.ResponseRecorder, _ string, _ restapi.UpdateSmscSettingsRequest) error {
-	return func(t *testing.T, w *httptest.ResponseRecorder, _ string, _ restapi.UpdateSmscSettingsRequest) error {
+func createAssertResponseWhenBadInput[T any](operationId string) func(t *testing.T, w *httptest.ResponseRecorder, _ string, _ T) error {
+	return func(t *testing.T, w *httptest.ResponseRecorder, _ string, _ T) error {
 		fmt.Println(w.Code, w.Body.String())
 		require.Equal(t, 422, w.Code)
 		zalandoProblem := make(map[string]any)
@@ -320,5 +319,4 @@ func createAssertResponseWhenBadInput(operationId string) func(t *testing.T, w *
 		require.Equal(t, fmt.Sprintf(httpValidationDetailWithLocationF, "body", operationId), zalandoProblem[zalandoDetailPath])
 		return nil
 	}
-
 }

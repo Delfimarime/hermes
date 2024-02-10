@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"fmt"
+	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
 	"github.com/delfimarime/hermes/services/smsc/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -24,6 +25,10 @@ const (
 	UnauthorizedAccessTitle       = "Unauthorized Access"
 	UnauthenticatedResponseDetail = "Cannot proceed with operation, the user and/or client cannot be determined"
 	UnauthorizedResponseDetail    = "Cannot proceed with operation, the user isn't authorized to perform it"
+
+	PageNotFoundTitle  = "Operation not found"
+	PageNotFoundType   = "/problems/not-found"
+	PageNotFoundDetail = "Cannot perform operation since it doesn't exist"
 )
 
 func readBody[T any](operationId string, c *gin.Context) (*T, error) {
@@ -131,9 +136,20 @@ func getErrorHandler(err error) func(c *gin.Context, operationId string, causedB
 		return handleValidationErrors
 	case RequestValidationError:
 		return handleRequestValidationError
+	case *sdk.EntityNotFoundError:
+		return sendPageNotFound
 	default:
 		return nil
 	}
+}
+
+func sendPageNotFound(c *gin.Context, _ string, _ error) {
+	_, _ = problem.New(
+		problem.Type(PageNotFoundType),
+		problem.Title(PageNotFoundTitle),
+		problem.Detail(PageNotFoundDetail),
+		problem.Status(http.StatusNotFound),
+	).WriteTo(c.Writer)
 }
 
 func handleTransactionProblem(c *gin.Context, operationId string, causedBy error) {
@@ -167,7 +183,6 @@ func sendErrorResponse(c *gin.Context, operationId, title, detail, errorType str
 	if errorType != "" {
 		determinedType += "/" + errorType
 	}
-
 	_, _ = problem.New(
 		problem.Title(title),
 		problem.Detail(detail),

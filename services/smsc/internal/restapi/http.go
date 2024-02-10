@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/delfimarime/hermes/services/smsc/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 	"net/http"
@@ -11,9 +12,10 @@ import (
 )
 
 const (
-	httpValidationTitle   = "Request not compliant"
-	constraintViolationF  = "/problems/%s/constraint-violation"
-	httpValidationDetailF = `Request doesn't comply with Operation{"id"="%s"} schema`
+	httpValidationTitle               = "Request not compliant"
+	constraintViolationF              = "/problems/%s/constraint-violation"
+	httpValidationDetailF             = `Request doesn't comply with Operation{"id"="%s"} schema`
+	httpValidationDetailWithLocationF = `$.%s doesn't comply with Operation{"id"="%s"} schema`
 
 	somethingWentWrongF       = "/problems/%s"
 	somethingWentWrongTitle   = "Something went wrong"
@@ -25,21 +27,52 @@ const (
 )
 
 func readBody[T any](operationId string, c *gin.Context) (*T, error) {
+	return read[T](operationId, c, bindBody[T])
+
+}
+
+func readQuery[T any](operationId string, c *gin.Context) (*T, error) {
+	return read[T](operationId, c, bindQuery[T])
+}
+
+func read[T any](operationId string, c *gin.Context, doBind func(operationId string, c *gin.Context, request *T) error) (*T, error) {
 	request := new(T)
-	err := bind[T](operationId, c, request)
+	err := doBind(operationId, c, request)
 	return request, err
 }
 
-func bind[T any](operationId string, c *gin.Context, request *T) error {
-	err := c.ShouldBindJSON(request)
+func bindBody[T any](operationId string, c *gin.Context, request *T) error {
+	return doBind[T](operationId, c, binding.JSON, request)
+}
+
+func bindQuery[T any](operationId string, c *gin.Context, request *T) error {
+	return doBind[T](operationId, c, binding.Query, request)
+}
+
+func doBind[T any](operationId string, c *gin.Context, b binding.Binding, request *T) error {
+	err := c.ShouldBindWith(request, b)
 	if err != nil {
-		zap.L().Error("Cannot bind JSON from gin.Context",
+		zap.L().Error("Cannot bind gin.Context into target Object",
 			zap.String("operationId", operationId),
 			zap.String("uri", c.Request.RequestURI),
+			zap.String("binding_tag", b.Name()),
 			zap.Error(err),
 		)
+		switch b.Name() {
+		case binding.JSON.Name(), binding.Query.Name(), binding.Header.Name():
+			name := b.Name()
+			if name == binding.JSON.Name() {
+				name = "body"
+			}
+			return RequestValidationError{
+				error: err,
+				From:  name,
+			}
+		default:
+			return err
+		}
 	}
-	return err
+	return nil
 }
 
 func sendRequestValidationResponse(c *gin.Context, statusCode int, operationId string, err string, opts ...problem.Option) {
@@ -79,29 +112,57 @@ func setUnauthenticatedResponse(operationId string, c *gin.Context) {
 		problem.Custom("operationId", operationId),
 	).WriteTo(c.Writer)
 }
+
 func sendProblem(c *gin.Context, operationId string, causedBy error) {
-	var (
-		title      = somethingWentWrongTitle
-		detail     = fmt.Sprintf(somethingWentWrongDetailF, operationId)
-		errorType  = ""
-		statusCode = http.StatusInternalServerError
-	)
+	handler := getErrorHandler(causedBy)
+	if handler != nil {
+		handler(c, operationId, causedBy)
+		return
+	}
+	sendErrorResponse(c, operationId, somethingWentWrongTitle, fmt.Sprintf(somethingWentWrongDetailF, operationId), "", http.StatusInternalServerError)
+}
 
-	switch t := causedBy.(type) {
+func getErrorHandler(err error) func(c *gin.Context, operationId string, causedBy error) {
+	switch err.(type) {
 	case service.TransactionProblem:
-		title, detail, errorType, statusCode = t.GetTitle(), t.GetDetail(), t.GetErrorType(), t.GetStatusCode()
+		return handleTransactionProblem
+	case validator.ValidationErrors, *validator.InvalidValidationError:
+		return handleValidationErrors
+	case *RequestValidationError:
+		return handleRequestValidationError
+	default:
+		return nil
+	}
+}
+
+func handleTransactionProblem(c *gin.Context, operationId string, causedBy error) {
+	t := causedBy.(service.TransactionProblem)
+	sendErrorResponse(c, operationId, t.GetTitle(), t.GetDetail(), t.GetErrorType(), t.GetStatusCode())
+}
+
+func handleValidationErrors(c *gin.Context, operationId string, causedBy error) {
+	statusCode := http.StatusUnprocessableEntity
+	if _, ok := causedBy.(*validator.InvalidValidationError); ok {
+		statusCode = http.StatusBadRequest
+	}
+	sendRequestValidationResponse(c, statusCode, operationId, fmt.Sprintf(httpValidationDetailF, operationId))
+}
+
+func handleRequestValidationError(c *gin.Context, operationId string, causedBy error) {
+	t := causedBy.(*RequestValidationError)
+	statusCode := http.StatusBadRequest
+	detail := fmt.Sprintf(httpValidationDetailWithLocationF, operationId, t.From)
+
+	switch t.error.(type) {
 	case validator.ValidationErrors:
-		sendRequestValidationResponse(c, http.StatusUnprocessableEntity, operationId, fmt.Sprintf(httpValidationDetailF, operationId))
-		return
+		statusCode = http.StatusUnprocessableEntity
 	case *validator.InvalidValidationError:
-		sendRequestValidationResponse(c, http.StatusBadRequest, operationId, fmt.Sprintf(httpValidationDetailF, operationId))
-		return
+		// statusCode remains http.StatusBadRequest
 	}
+	sendRequestValidationResponse(c, statusCode, operationId, detail)
+}
 
-	if statusCode < 400 || statusCode > 599 {
-		statusCode = http.StatusInternalServerError
-	}
-
+func sendErrorResponse(c *gin.Context, operationId, title, detail, errorType string, statusCode int) {
 	determinedType := fmt.Sprintf(somethingWentWrongF, operationId)
 	if errorType != "" {
 		determinedType += "/" + errorType
@@ -114,4 +175,13 @@ func sendProblem(c *gin.Context, operationId string, causedBy error) {
 		problem.Status(statusCode),
 		problem.Custom("operationId", operationId),
 	).WriteTo(c.Writer)
+}
+
+type RequestValidationError struct {
+	error error
+	From  string
+}
+
+func (e RequestValidationError) Error() string {
+	return e.error.Error()
 }

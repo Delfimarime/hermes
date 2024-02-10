@@ -7,7 +7,9 @@ const (
 	RemoveSmscOperationId    = "RemoveSmscById"
 	EditSmscOperationId      = "EditSmscById"
 	EditSmscStateOperationId = "EditSmscStateById"
-	EditSmscSettingsId       = "EidSmscSettingsById"
+	EditSmscSettingsId       = "EditSmscSettingsById"
+	GetSmscOperationId       = "GetSmscById"
+	GetSmscPageOperationId   = "GetSmscPage"
 )
 
 const (
@@ -19,7 +21,10 @@ const (
 
 func getGinEngine(authenticator Authenticator, smscApi *SmscApi) *gin.Engine {
 	r := gin.Default()
+	// SMSC Operations
+	r.GET(smscByIdEndpoint, withCatchError(GetSmscOperationId, smscApi.FindById))
 	r.POST(smscEndpoint, withUser(AddSmscOperationId, authenticator, smscApi.New))
+	r.GET(smscEndpoint, withCatchOperationError(GetSmscPageOperationId, smscApi.FindAll))
 	r.PUT(smscByIdEndpoint, withUser(EditSmscOperationId, authenticator, smscApi.EditById))
 	r.DELETE(smscByIdEndpoint, withUser(RemoveSmscOperationId, authenticator, smscApi.RemoveById))
 	r.PUT(smscStateByIdEndpoint, withUser(EditSmscStateOperationId, authenticator, smscApi.EditStateById))
@@ -36,17 +41,29 @@ func withUser(operationId string, authenticator Authenticator, f func(operationI
 }
 
 func withPrincipal(operationId string, authenticator Authenticator, extract func(*gin.Context) string, exec func(operationId, username string, c *gin.Context) error) func(*gin.Context) {
-	return func(c *gin.Context) {
+	return withCatchError(operationId, func(c *gin.Context) error {
 		if authenticator == nil {
 			setUnauthenticatedResponse(operationId, c)
-			return
+			return nil
 		}
 		principal := extract(c)
 		if principal == "" {
 			setUnauthenticatedResponse(operationId, c)
-			return
+			return nil
 		}
-		if err := exec(operationId, principal, c); err != nil {
+		return exec(operationId, principal, c)
+	})
+}
+
+func withCatchOperationError(operationId string, exec func(operationId string, c *gin.Context) error) func(c *gin.Context) {
+	return withCatchError(operationId, func(c *gin.Context) error {
+		return exec(operationId, c)
+	})
+}
+
+func withCatchError(operationId string, exec func(c *gin.Context) error) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		if err := exec(c); err != nil {
 			sendProblem(c, operationId, err)
 			return
 		}

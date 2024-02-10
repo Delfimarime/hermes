@@ -11,9 +11,28 @@ type SmscService interface {
 	//	-  request: the configuration of the SMSC that must be created
 	//
 	// Returns:
-	//  - restapi.NewSmscResponse that represents the newly created SMSC
+	//  - restapi.NewSmscResponse: that represents the newly created SMSC
 	//  - error: an error if the operation fails, nil otherwise
 	Add(username string, request restapi.NewSmscRequest) (restapi.NewSmscResponse, error)
+
+	// FindAll retrieves a page of SMSC that match given criteria
+	//
+	// Parameters:
+	//	- request: the criteria to fetch against
+	//
+	// Returns:
+	//  - restapi.Page: that has restapi.PaginatedSmsc representing SMSCs
+	//  - error: an error if the operation fails, nil otherwise
+	FindAll(request restapi.SmscSearchRequest) (restapi.Page[restapi.PaginatedSmsc], error)
+
+	// FindById retrieves an SMSC with a specific id
+	//
+	// Parameters:
+	//	- id: identifies the SMSC that needs to be retrieved
+	//
+	// Returns:
+	//  - error: an error if the operation fails, nil otherwise
+	FindById(id string) (restapi.GetSmscByIdResponse, error)
 
 	// EditById modifies an SMSC with a specific id
 	//
@@ -23,7 +42,7 @@ type SmscService interface {
 	//	- request: the configuration that must be applied to the SMSC
 	//
 	// Returns:
-	//  - restapi.UpdateSmscResponse that represents the SMSC after apply the configuration
+	//  - restapi.UpdateSmscResponse: that represents the SMSC after apply the configuration
 	//  - error: an error if the operation fails, nil otherwise
 	EditById(username string, id string, request restapi.UpdateSmscRequest) (restapi.UpdateSmscResponse, error)
 

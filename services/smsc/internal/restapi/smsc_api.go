@@ -32,6 +32,49 @@ func (instance *SmscApi) New(operationId, username string, c *gin.Context) error
 	return nil
 }
 
+// FindAll retrieves SMSCs based on a Criteria
+//
+// Parameters:
+// - operationId: the ID of the operation
+// - c: the gin.Context object
+//
+// Returns:
+// - error: an error if the operation fails, nil otherwise
+func (instance *SmscApi) FindAll(operationId string, c *gin.Context) error {
+	request, err := readQuery[restapi.SmscSearchRequest](operationId, c)
+	if err != nil {
+		return err
+	}
+	page, err := instance.service.FindAll(*request)
+	if err != nil {
+		return err
+	}
+	c.JSON(200, restapi.ResponsePage[restapi.PaginatedSmsc]{
+		Self:  page.Self,
+		Next:  page.Next,
+		Items: page.Items,
+		Prev:  page.Previous,
+	})
+	return nil
+}
+
+// FindById retrieves an SMSC by Id
+//
+// Parameters:
+// - operationId: the ID of the operation
+// - c: the gin.Context object
+//
+// Returns:
+// - error: an error if the operation fails, nil otherwise
+func (instance *SmscApi) FindById(c *gin.Context) error {
+	response, err := instance.service.FindById(c.Param("id"))
+	if err != nil {
+		return err
+	}
+	c.JSON(200, response)
+	return nil
+}
+
 // EditById updates an SMSC by ID.
 //
 // Parameters:

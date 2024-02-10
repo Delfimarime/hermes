@@ -58,7 +58,7 @@ func (instance *SmscApi) FindAll(operationId string, c *gin.Context) error {
 	return nil
 }
 
-// FindById retrieves an SMSC by Id
+// FindById retrieves an SMSC by ID
 //
 // Parameters:
 // - operationId: the ID of the operation

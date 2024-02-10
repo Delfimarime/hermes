@@ -21,7 +21,6 @@ const (
 
 func getGinEngine(authenticator Authenticator, smscApi *SmscApi) *gin.Engine {
 	r := gin.Default()
-	// SMSC Operations
 	r.GET(smscByIdEndpoint, withCatchError(GetSmscOperationId, smscApi.FindById))
 	r.POST(smscEndpoint, withUser(AddSmscOperationId, authenticator, smscApi.New))
 	r.GET(smscEndpoint, withCatchOperationError(GetSmscPageOperationId, smscApi.FindAll))

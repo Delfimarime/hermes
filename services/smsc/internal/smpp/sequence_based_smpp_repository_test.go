@@ -5,12 +5,12 @@ import (
 	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
 )
 
-type SequenceBasedSmsRepository struct {
+type SequenceBasedSmppRepository struct {
 	Err error
 	Arr []model.Smpp
 }
 
-func (s SequenceBasedSmsRepository) FindAll() ([]model.Smpp, error) {
+func (s SequenceBasedSmppRepository) FindAll() ([]model.Smpp, error) {
 	if s.Err != nil {
 		return nil, s.Err
 	}
@@ -20,7 +20,7 @@ func (s SequenceBasedSmsRepository) FindAll() ([]model.Smpp, error) {
 	return s.Arr, nil
 }
 
-func (s SequenceBasedSmsRepository) FindById(id string) (model.Smpp, error) {
+func (s SequenceBasedSmppRepository) FindById(id string) (model.Smpp, error) {
 	if s.Arr != nil {
 		for _, each := range s.Arr {
 			if each.Id == id {
@@ -34,6 +34,10 @@ func (s SequenceBasedSmsRepository) FindById(id string) (model.Smpp, error) {
 	}
 }
 
-func (s SequenceBasedSmsRepository) GetConditionsFrom(id string) ([]model.Condition, error) {
+func (s SequenceBasedSmppRepository) GetConditionsFrom(id string) ([]model.Condition, error) {
 	return nil, nil
+}
+
+func (s SequenceBasedSmppRepository) Save(smpp model.Smpp) error {
+	panic("implement me")
 }

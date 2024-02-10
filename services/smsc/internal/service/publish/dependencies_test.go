@@ -145,3 +145,7 @@ func (s SequenceBasedSmppRepository) GetConditionsFrom(id string) ([]model.Condi
 	}
 	return []model.Condition{valueFrom}, nil
 }
+
+func (s SequenceBasedSmppRepository) Save(smpp model.Smpp) error {
+	panic("implement me")
+}

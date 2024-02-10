@@ -297,7 +297,7 @@ func NewApp(t *testing.T, cfg TestAppConfig, fxOptions ...fx.Option) *fxtest.App
 					Alias:       "vodacom-mozambique-listener",
 				})
 			}
-			return SequenceBasedSmsRepository{Arr: smppList}
+			return SequenceBasedSmppRepository{Arr: smppList}
 		}),
 		GetUberFxModule(), // smpp
 	}

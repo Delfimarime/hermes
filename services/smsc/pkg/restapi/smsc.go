@@ -8,6 +8,11 @@ const (
 	TransceiverType SmscType = "TRANSCEIVER"
 )
 
+const (
+	ActivatedSmscState   string = "ACTIVATED"
+	DeactivatedSmscState string = "DEACTIVATED"
+)
+
 type SmscType string
 
 type NewSmscRequest struct {
@@ -78,7 +83,7 @@ type Merge struct {
 type UpdateSmscSettingsRequest SmscSettingsRequest
 
 type UpdateSmscState struct {
-	Value string `json:"value" binding:"required,oneof=ACTIVATED,DEACTIVATED"`
+	Value string `json:"value" binding:"required,oneof=ACTIVATED DEACTIVATED"`
 }
 
 type GetSmscByIdResponse UpdateSmscResponse
@@ -89,7 +94,7 @@ type SmscSearchRequest struct {
 	LastUpdatedBy string   `form:"last_updated_by"`
 	S             string   `form:"s" binding:"lte=50"`
 	PoweredBy     string   `form:"powered_by" binding:"lte=45"`
-	State         string   `form:"state" binding:"oneof=ACTIVATED,DEACTIVATED"`
+	State         string   `form:"state" binding:"oneof=ACTIVATED DEACTIVATED"`
 	Type          SmscType `form:"type" binding:"oneof=TRANSMITTER TRANSCEIVER RECEIVER"`
 	Sort          string   `form:"sort" binding:"oneof=+name -name +created_by -created_at +last_modified_at -last_modified_at +state -state +powered_by -powered_by"`
 }

@@ -24,6 +24,28 @@ const (
 
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
+func createNewSmscSettingsRequest(f func(request *restapi.NewSmscRequest)) restapi.NewSmscRequest {
+	r := &restapi.NewSmscRequest{
+		UpdateSmscRequest: restapi.UpdateSmscRequest{
+			Settings: restapi.SmscSettingsRequest{
+				Host: restapi.Host{
+					Username: "admin",
+					Password: "admin",
+					Address:  "localhost:4000",
+				},
+			},
+			Name:        "raitonbl",
+			Description: "<description/>",
+			Type:        restapi.TransceiverType,
+		},
+		Alias: "raitonbl",
+	}
+	if f != nil {
+		f(r)
+	}
+	return *r
+}
+
 func TestSmscApi_New_and_expect_success(t *testing.T) {
 	doTestSmscApiNewWithSuccess(t, []struct {
 		name     string

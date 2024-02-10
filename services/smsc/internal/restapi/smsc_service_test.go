@@ -7,7 +7,8 @@ import (
 )
 
 type TestSmscService struct {
-	err error
+	err                 error
+	getSmscByIdResponse restapi.GetSmscByIdResponse
 }
 
 func (t *TestSmscService) Add(username string, request restapi.NewSmscRequest) (restapi.NewSmscResponse, error) {
@@ -82,12 +83,12 @@ func (t *TestSmscService) EditById(username string, id string, request restapi.U
 	}, nil
 }
 
-func (t *TestSmscService) EditSettingsById(username string, id string, request restapi.UpdateSmscSettingsRequest) error {
+func (t *TestSmscService) EditSettingsById(_ string, _ string, _ restapi.UpdateSmscSettingsRequest) error {
 	return t.err
 }
 
-func (t *TestSmscService) EditStateById(username string, id string, request restapi.UpdateSmscState) error {
-	panic("implement me")
+func (t *TestSmscService) EditStateById(_ string, _ string, _ restapi.UpdateSmscState) error {
+	return t.err
 }
 
 func (t *TestSmscService) RemoveById(_ string, _ string) error {
@@ -99,6 +100,10 @@ func (t *TestSmscService) FindAll(request restapi.SmscSearchRequest) (restapi.Pa
 }
 
 func (t *TestSmscService) FindById(id string) (restapi.GetSmscByIdResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	if t.err != nil {
+		return restapi.GetSmscByIdResponse{}, t.err
+	}
+	resp := t.getSmscByIdResponse
+	resp.Settings.Host.Password = ""
+	return resp, nil
 }

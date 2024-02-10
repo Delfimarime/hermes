@@ -93,3 +93,12 @@ func (t *TestSmscService) EditStateById(username string, id string, request rest
 func (t *TestSmscService) RemoveById(username string, id string) error {
 	panic("implement me")
 }
+
+func (t *TestSmscService) FindAll(request restapi.SmscSearchRequest) (restapi.Page[restapi.PaginatedSmsc], error) {
+	panic("implement me")
+}
+
+func (t *TestSmscService) FindById(id string) (restapi.GetSmscByIdResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}

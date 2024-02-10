@@ -902,7 +902,7 @@ func doTestSmscApiNewWithBadInput(t *testing.T, arr []struct {
 			require.Equal(t, httpValidationTitle, zalandoProblem[zalandoTitlePath])
 			require.Equal(t, AddSmscOperationId, zalandoProblem[zalandoOperationIdPath])
 			require.Equal(t, fmt.Sprintf(constraintViolationF, AddSmscOperationId), zalandoProblem[zalandoTypePath])
-			require.Equal(t, fmt.Sprintf(httpValidationDetailF, AddSmscOperationId), zalandoProblem[zalandoDetailPath])
+			require.Equal(t, fmt.Sprintf(httpValidationDetailWithLocationF, "body", AddSmscOperationId), zalandoProblem[zalandoDetailPath])
 		})
 	}
 }

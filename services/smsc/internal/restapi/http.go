@@ -119,7 +119,8 @@ func sendProblem(c *gin.Context, operationId string, causedBy error) {
 		handler(c, operationId, causedBy)
 		return
 	}
-	sendErrorResponse(c, operationId, somethingWentWrongTitle, fmt.Sprintf(somethingWentWrongDetailF, operationId), "", http.StatusInternalServerError)
+	sendErrorResponse(c, operationId, somethingWentWrongTitle, fmt.Sprintf(somethingWentWrongDetailF, operationId),
+		"", http.StatusInternalServerError)
 }
 
 func getErrorHandler(err error) func(c *gin.Context, operationId string, causedBy error) {
@@ -128,7 +129,7 @@ func getErrorHandler(err error) func(c *gin.Context, operationId string, causedB
 		return handleTransactionProblem
 	case validator.ValidationErrors, *validator.InvalidValidationError:
 		return handleValidationErrors
-	case *RequestValidationError:
+	case RequestValidationError:
 		return handleRequestValidationError
 	default:
 		return nil
@@ -149,15 +150,14 @@ func handleValidationErrors(c *gin.Context, operationId string, causedBy error) 
 }
 
 func handleRequestValidationError(c *gin.Context, operationId string, causedBy error) {
-	t := causedBy.(*RequestValidationError)
+	t := causedBy.(RequestValidationError)
 	statusCode := http.StatusBadRequest
-	detail := fmt.Sprintf(httpValidationDetailWithLocationF, operationId, t.From)
+	detail := fmt.Sprintf(httpValidationDetailWithLocationF, t.From, operationId)
 
 	switch t.error.(type) {
 	case validator.ValidationErrors:
 		statusCode = http.StatusUnprocessableEntity
-	case *validator.InvalidValidationError:
-		// statusCode remains http.StatusBadRequest
+		break
 	}
 	sendRequestValidationResponse(c, statusCode, operationId, detail)
 }

@@ -83,7 +83,7 @@ func (t *TestSmscService) EditById(username string, id string, request restapi.U
 }
 
 func (t *TestSmscService) EditSettingsById(username string, id string, request restapi.UpdateSmscSettingsRequest) error {
-	panic("implement me")
+	return t.err
 }
 
 func (t *TestSmscService) EditStateById(username string, id string, request restapi.UpdateSmscState) error {

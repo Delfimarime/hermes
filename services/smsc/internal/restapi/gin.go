@@ -16,7 +16,7 @@ const (
 	smscEndpoint             = "/smscs"
 	smscByIdEndpoint         = "/smscs/:id"
 	smscStateByIdEndpoint    = "/smscs/:id/state"
-	smscSettingsByIdEndpoint = "/smscs/:id/state"
+	smscSettingsByIdEndpoint = "/smscs/:id/settings"
 )
 
 func getGinEngine(authenticator Authenticator, smscApi *SmscApi) *gin.Engine {
@@ -28,7 +28,7 @@ func getGinEngine(authenticator Authenticator, smscApi *SmscApi) *gin.Engine {
 	r.PUT(smscByIdEndpoint, withUser(EditSmscOperationId, authenticator, smscApi.EditById))
 	r.DELETE(smscByIdEndpoint, withUser(RemoveSmscOperationId, authenticator, smscApi.RemoveById))
 	r.PUT(smscStateByIdEndpoint, withUser(EditSmscStateOperationId, authenticator, smscApi.EditStateById))
-	r.POST(smscSettingsByIdEndpoint, withUser(EditSmscSettingsId, authenticator, smscApi.EditSettingsById))
+	r.PUT(smscSettingsByIdEndpoint, withUser(EditSmscSettingsId, authenticator, smscApi.EditSettingsById))
 	return r
 }
 

@@ -41,12 +41,45 @@ func (t *TestSmscService) Add(username string, request restapi.NewSmscRequest) (
 		CreatedAt: time.Now(),
 		Id:        uuid.New().String(),
 	}
-
 	return response, nil
 }
 
 func (t *TestSmscService) EditById(username string, id string, request restapi.UpdateSmscRequest) (restapi.UpdateSmscResponse, error) {
-	panic("implement me")
+	if t.err != nil {
+		return restapi.UpdateSmscResponse{}, t.err
+	}
+	lastUpdatedAt := time.Date(2024, time.February, 10, 17, 35, 0, 0, time.UTC)
+	createdAt := lastUpdatedAt.Add(-time.Hour * 24 * 7)
+	return restapi.UpdateSmscResponse{
+		LastUpdatedBy: username,
+		LastUpdatedAt: lastUpdatedAt,
+		NewSmscResponse: restapi.NewSmscResponse{
+			NewSmscRequest: restapi.NewSmscRequest{
+				UpdateSmscRequest: restapi.UpdateSmscRequest{
+					Name:        request.Name,
+					Type:        request.Type,
+					PoweredBy:   request.PoweredBy,
+					Description: request.Description,
+					Settings: restapi.SmscSettingsRequest{
+						Bind:        request.Settings.Bind,
+						Merge:       request.Settings.Merge,
+						Enquire:     request.Settings.Enquire,
+						Response:    request.Settings.Response,
+						Delivery:    request.Settings.Delivery,
+						ServiceType: request.Settings.ServiceType,
+						Host: restapi.Host{
+							Username: request.Settings.Host.Username,
+							Address:  request.Settings.Host.Address,
+						},
+						SourceAddr: request.Settings.SourceAddr,
+					},
+				},
+			},
+			CreatedBy: username,
+			CreatedAt: createdAt,
+			Id:        uuid.New().String(),
+		},
+	}, nil
 }
 
 func (t *TestSmscService) EditSettingsById(username string, id string, request restapi.UpdateSmscSettingsRequest) error {

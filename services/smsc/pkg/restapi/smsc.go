@@ -30,7 +30,11 @@ type UpdateSmscRequest struct {
 	Type        SmscType            `json:"type" binding:"required,oneof=TRANSMITTER TRANSCEIVER RECEIVER"`
 }
 
-type UpdateSmscResponse NewSmscResponse
+type UpdateSmscResponse struct {
+	NewSmscResponse
+	LastUpdatedAt time.Time `json:"last_modified_at" binding:"required"`
+	LastUpdatedBy string    `json:"last_modified_by,omitempty" binding:"required"`
+}
 
 type SmscSettingsRequest struct {
 	Bind        *Bind     `json:"bind,omitempty"`

@@ -1,6 +1,9 @@
 package restapi
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/delfimarime/hermes/services/smsc/internal/service/security"
+	"github.com/gin-gonic/gin"
+)
 
 const (
 	AddSmscOperationId       = "AddSmsc"
@@ -19,7 +22,7 @@ const (
 	smscSettingsByIdEndpoint = "/smscs/:id/settings"
 )
 
-func getGinEngine(authenticator Authenticator, smscApi *SmscApi) *gin.Engine {
+func getGinEngine(authenticator security.Authenticator, smscApi *SmscApi) *gin.Engine {
 	r := gin.Default()
 	r.GET(smscByIdEndpoint, withCatchError(GetSmscOperationId, smscApi.FindById))
 	r.POST(smscEndpoint, withUser(AddSmscOperationId, authenticator, smscApi.New))
@@ -31,15 +34,15 @@ func getGinEngine(authenticator Authenticator, smscApi *SmscApi) *gin.Engine {
 	return r
 }
 
-func withClient(operationId string, authenticator Authenticator, f func(operationId, clientId string, c *gin.Context) error) func(*gin.Context) {
+func withClient(operationId string, authenticator security.Authenticator, f func(operationId, clientId string, c *gin.Context) error) func(*gin.Context) {
 	return withPrincipal(operationId, authenticator, authenticator.GetClientId, f)
 }
 
-func withUser(operationId string, authenticator Authenticator, f func(operationId, username string, c *gin.Context) error) func(*gin.Context) {
+func withUser(operationId string, authenticator security.Authenticator, f func(operationId, username string, c *gin.Context) error) func(*gin.Context) {
 	return withPrincipal(operationId, authenticator, authenticator.GetPrincipal, f)
 }
 
-func withPrincipal(operationId string, authenticator Authenticator, extract func(*gin.Context) string, exec func(operationId, username string, c *gin.Context) error) func(*gin.Context) {
+func withPrincipal(operationId string, authenticator security.Authenticator, extract func(*gin.Context) string, exec func(operationId, username string, c *gin.Context) error) func(*gin.Context) {
 	return withCatchError(operationId, func(c *gin.Context) error {
 		if authenticator == nil {
 			setUnauthenticatedResponse(operationId, c)

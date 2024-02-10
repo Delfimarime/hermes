@@ -20,6 +20,82 @@ type EditByTestConfiguration struct {
 	AssertWith func(*testing.T, *httptest.ResponseRecorder, string, restapi.UpdateSmscRequest) error
 }
 
+func TestSmscApi_EditById_and_expect_success(t *testing.T) {
+	factory := func(f func(request *restapi.UpdateSmscRequest)) restapi.UpdateSmscRequest {
+		r := &restapi.UpdateSmscRequest{
+			PoweredBy: "raitonbl.com",
+			Settings: restapi.SmscSettingsRequest{
+				Host: restapi.Host{
+					Username: "admin",
+					Password: "admin",
+					Address:  "localhost:4000",
+				},
+			},
+			Name:        "raitonbl",
+			Description: "<description/>",
+			Type:        restapi.TransmitterType,
+		}
+		if f != nil {
+			f(r)
+		}
+		return *r
+	}
+	params := []EditByTestConfiguration{
+		{
+			name:   "type=transmitter",
+			target: "0",
+			request: factory(func(r *restapi.UpdateSmscRequest) {
+				r.Type = restapi.TransmitterType
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "type=receiver",
+			target: "0",
+			request: factory(func(r *restapi.UpdateSmscRequest) {
+				r.Type = restapi.ReceiverType
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "type=transceiver",
+			target: "0",
+			request: factory(func(r *restapi.UpdateSmscRequest) {
+				r.Type = restapi.TransceiverType
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "powered_by=nil",
+			target: "0",
+			request: factory(func(r *restapi.UpdateSmscRequest) {
+				r.PoweredBy = ""
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "powered_by=<value>",
+			target: "0",
+			request: factory(func(r *restapi.UpdateSmscRequest) {
+				r.PoweredBy = "<value>"
+			}),
+			AssertWith: nil,
+		},
+		{
+			name:   "settings.bind.timeout=1000",
+			target: "0",
+			request: factory(func(r *restapi.UpdateSmscRequest) {
+				r.Settings.Bind = &restapi.Bind{
+					Timeout: 1000,
+				}
+			}),
+			AssertWith: nil,
+		},
+	}
+	executeEditByIdTest(t, assertUpdateSmscResponseWhenOK, params)
+
+}
+
 func executeEditByIdTest(t *testing.T, assertWith func(*testing.T, *httptest.ResponseRecorder, string, restapi.UpdateSmscRequest) error, arr []EditByTestConfiguration) {
 	if arr == nil {
 		return

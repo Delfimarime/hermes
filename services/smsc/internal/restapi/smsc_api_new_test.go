@@ -107,7 +107,7 @@ func TestSmscApi_New_and_expect_success(t *testing.T) {
 			},
 		},
 		{
-			name: "powered_by=nil",
+			name: "settings.bind.timeout=1000",
 			request: restapi.NewSmscRequest{
 				UpdateSmscRequest: restapi.UpdateSmscRequest{
 					Settings: restapi.SmscSettingsRequest{

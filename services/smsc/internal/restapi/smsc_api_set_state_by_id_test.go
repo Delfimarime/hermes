@@ -74,7 +74,7 @@ func executeSetStateByIdTest(t *testing.T, assertWith func(*testing.T, *httptest
 		if definition.username != "" {
 			username = definition.username
 		}
-		r := getGinEngine(&HardCodedAuthenticator{username: username}, smscApi)
+		r := getGinEngine(&HardCodedAuthenticator{username: username}, smscApi, nil)
 		t.Run(definition.name, func(t *testing.T) {
 			requestData, _ := json.Marshal(definition.request)
 			req, _ := http.NewRequest("PUT", smscEndpoint+"/"+definition.target+"/state", bytes.NewBuffer(requestData))

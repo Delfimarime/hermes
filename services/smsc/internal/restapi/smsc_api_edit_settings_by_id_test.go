@@ -275,7 +275,7 @@ func executeEditSettingsByIdTest(t *testing.T, assertWith func(*testing.T, *http
 		if definition.username != "" {
 			username = definition.username
 		}
-		r := getGinEngine(&HardCodedAuthenticator{username: username}, smscApi)
+		r := getGinEngine(&HardCodedAuthenticator{username: username}, smscApi, nil)
 		t.Run(definition.name, func(t *testing.T) {
 			requestData, _ := json.Marshal(definition.request)
 			req, _ := http.NewRequest("PUT", smscEndpoint+"/"+definition.target+"/settings", bytes.NewBuffer(requestData))

@@ -56,7 +56,7 @@ func executeRemoveByIdTest(t *testing.T, assertWith func(*testing.T, *httptest.R
 		if definition.username != "" {
 			username = definition.username
 		}
-		r := getGinEngine(&HardCodedAuthenticator{username: username}, smscApi)
+		r := getGinEngine(&HardCodedAuthenticator{username: username}, smscApi, nil)
 		t.Run(definition.name, func(t *testing.T) {
 			req, _ := http.NewRequest("DELETE", smscEndpoint+"/"+definition.target, nil)
 			w := httptest.NewRecorder()

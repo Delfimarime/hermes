@@ -836,7 +836,7 @@ func doTestSmscApiNewWithSuccess(t *testing.T, arr []struct {
 		if definition.username != "" {
 			username = definition.username
 		}
-		r := getGinEngine(&HardCodedAuthenticator{username: username}, smscApi)
+		r := getGinEngine(&HardCodedAuthenticator{username: username}, smscApi, nil)
 		t.Run(definition.name, func(t *testing.T) {
 			smscRequest := definition.request
 			requestData, _ := json.Marshal(smscRequest)
@@ -907,7 +907,7 @@ func doTestSmscApiNewWithBadInput(t *testing.T, arr []struct {
 	smscApi := &SmscApi{
 		service: &TestSmscService{},
 	}
-	r := getGinEngine(&HardCodedAuthenticator{username: "dmarime"}, smscApi)
+	r := getGinEngine(&HardCodedAuthenticator{username: "dmarime"}, smscApi, nil)
 	for _, definition := range arr {
 		t.Run(definition.name, func(t *testing.T) {
 			smscRequest := definition.request
@@ -939,7 +939,7 @@ func doTestSmscApiNewAndCatchError(t *testing.T, arr []struct {
 	smscApi := &SmscApi{
 		service: &TestSmscService{},
 	}
-	r := getGinEngine(&HardCodedAuthenticator{username: "dmarime"}, smscApi)
+	r := getGinEngine(&HardCodedAuthenticator{username: "dmarime"}, smscApi, nil)
 	for _, definition := range arr {
 		smscApi.service.(*TestSmscService).err = definition.err
 		t.Run(definition.name, func(t *testing.T) {

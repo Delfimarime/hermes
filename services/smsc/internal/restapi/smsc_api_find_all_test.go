@@ -105,7 +105,7 @@ func executeFindAllTest(t *testing.T, assertWith func(*testing.T, *httptest.Resp
 		if definition.username != "" {
 			username = definition.username
 		}
-		r := getGinEngine(&HardCodedAuthenticator{username: username}, smscApi)
+		r := getGinEngine(&HardCodedAuthenticator{username: username}, smscApi, nil)
 		t.Run(definition.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", getEndpointURL(smscEndpoint, definition.searchCriteria), nil)
 			w := httptest.NewRecorder()

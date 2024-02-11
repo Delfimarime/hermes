@@ -16,6 +16,12 @@ const (
 	EditSmscSettingsId       = "EditSmscSettingsById"
 	GetSmscOperationId       = "GetSmscById"
 	GetSmscPageOperationId   = "GetSmscPage"
+
+	AddVaultOperationId     = "AddVault"
+	GetVaultOperationId     = "GetVaultById"
+	GetVaultPageOperationId = "GetVaultPage"
+	EditVaultOperationId    = "EditVaultById"
+	RemoveVaultOperationId  = "RemoveVaultById"
 )
 
 const (
@@ -24,25 +30,34 @@ const (
 	smscStateByIdEndpoint    = smscByIdEndpoint + "/state"
 	smscSettingsByIdEndpoint = smscByIdEndpoint + "settings"
 
-	vaultEndpoint           = "/vaults/"
-	integrationByIdEndpoint = vaultEndpoint + "/:id"
+	vaultEndpoint     = "/vaults/"
+	vaultByIdEndpoint = vaultEndpoint + "/:id"
 )
 
-func getGinEngine(authenticator security.Authenticator, smscApi *SmscApi) *gin.Engine {
+func getGinEngine(authenticator security.Authenticator, smscApi *SmscApi, vaultApi *VaultApi) *gin.Engine {
 	r := gin.Default()
 	// SETUP
 	r.Use(gin.Recovery())
 	r.Use(ginzap.RecoveryWithZap(zap.L(), true))
 	r.Use(ginzap.Ginzap(zap.L(), time.RFC3339, true))
 	// SMSC Endpoint(s)
-	r.GET(smscByIdEndpoint, withCatchError(GetSmscOperationId, smscApi.FindById))
-	r.POST(smscEndpoint, withUser(AddSmscOperationId, authenticator, smscApi.New))
-	r.GET(smscEndpoint, withCatchOperationError(GetSmscPageOperationId, smscApi.FindAll))
-	r.PUT(smscByIdEndpoint, withUser(EditSmscOperationId, authenticator, smscApi.EditById))
-	r.DELETE(smscByIdEndpoint, withUser(RemoveSmscOperationId, authenticator, smscApi.RemoveById))
-	r.PUT(smscStateByIdEndpoint, withUser(EditSmscStateOperationId, authenticator, smscApi.EditStateById))
-	r.PUT(smscSettingsByIdEndpoint, withUser(EditSmscSettingsId, authenticator, smscApi.EditSettingsById))
+	if smscApi != nil {
+		r.GET(smscByIdEndpoint, withCatchError(GetSmscOperationId, smscApi.FindById))
+		r.POST(smscEndpoint, withUser(AddSmscOperationId, authenticator, smscApi.New))
+		r.GET(smscEndpoint, withCatchOperationError(GetSmscPageOperationId, smscApi.FindAll))
+		r.PUT(smscByIdEndpoint, withUser(EditSmscOperationId, authenticator, smscApi.EditById))
+		r.DELETE(smscByIdEndpoint, withUser(RemoveSmscOperationId, authenticator, smscApi.RemoveById))
+		r.PUT(smscStateByIdEndpoint, withUser(EditSmscStateOperationId, authenticator, smscApi.EditStateById))
+		r.PUT(smscSettingsByIdEndpoint, withUser(EditSmscSettingsId, authenticator, smscApi.EditSettingsById))
+	}
 	// Vault Endpoint(s)
+	if vaultApi != nil {
+		r.POST(vaultEndpoint, withUser(AddVaultOperationId, authenticator, vaultApi.New))
+		r.GET(vaultEndpoint, withCatchOperationError(GetVaultPageOperationId, vaultApi.FindAll))
+		r.GET(vaultByIdEndpoint, withUser(GetVaultOperationId, authenticator, vaultApi.EditById))
+		r.PUT(vaultByIdEndpoint, withUser(EditVaultOperationId, authenticator, vaultApi.RemoveById))
+		r.DELETE(vaultByIdEndpoint, withUser(RemoveVaultOperationId, authenticator, vaultApi.RemoveById))
+	}
 	return r
 }
 

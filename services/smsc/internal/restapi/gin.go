@@ -2,7 +2,10 @@ package restapi
 
 import (
 	"github.com/delfimarime/hermes/services/smsc/internal/service/security"
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	"time"
 )
 
 const (
@@ -24,6 +27,11 @@ const (
 
 func getGinEngine(authenticator security.Authenticator, smscApi *SmscApi) *gin.Engine {
 	r := gin.Default()
+	// SETUP
+	r.Use(gin.Recovery())
+	r.Use(ginzap.RecoveryWithZap(zap.L(), true))
+	r.Use(ginzap.Ginzap(zap.L(), time.RFC3339, true))
+	// SMSC
 	r.GET(smscByIdEndpoint, withCatchError(GetSmscOperationId, smscApi.FindById))
 	r.POST(smscEndpoint, withUser(AddSmscOperationId, authenticator, smscApi.New))
 	r.GET(smscEndpoint, withCatchOperationError(GetSmscPageOperationId, smscApi.FindAll))

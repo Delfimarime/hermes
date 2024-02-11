@@ -170,14 +170,12 @@ func handleRequestValidationError(c *gin.Context, operationId string, causedBy e
 	statusCode := http.StatusBadRequest
 	detail := fmt.Sprintf(httpValidationDetailWithLocationF, t.From, operationId)
 	switch t.Err.(type) {
-	case validator.ValidationErrors, BadInputError:
+	case validator.ValidationErrors, WebpageInputError:
 		statusCode = http.StatusUnprocessableEntity
 		break
 	}
 	sendRequestValidationResponse(c, statusCode, operationId, detail)
 }
-
-type BadInputError error
 
 func sendErrorResponse(c *gin.Context, operationId, title, detail, errorType string, statusCode int) {
 	determinedType := fmt.Sprintf(somethingWentWrongF, operationId)
@@ -192,6 +190,8 @@ func sendErrorResponse(c *gin.Context, operationId, title, detail, errorType str
 		problem.Custom("operationId", operationId),
 	).WriteTo(c.Writer)
 }
+
+type WebpageInputError error
 
 type GoValidationError struct {
 	Err  error

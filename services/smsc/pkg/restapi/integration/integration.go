@@ -1,4 +1,4 @@
-package restapi
+package integration
 
 type Integration struct {
 	AzureVault

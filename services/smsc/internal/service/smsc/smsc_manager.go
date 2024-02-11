@@ -6,7 +6,7 @@ import (
 	"github.com/delfimarime/hermes/services/smsc/internal/model"
 	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
 	"github.com/delfimarime/hermes/services/smsc/internal/service/resolve"
-	"github.com/delfimarime/hermes/services/smsc/pkg/restapi"
+	"github.com/delfimarime/hermes/services/smsc/pkg/restapi/smsc"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"time"
@@ -24,10 +24,10 @@ type DefaultSmscService struct {
 	resolver    resolve.ValueResolver
 }
 
-func (instance *DefaultSmscService) Add(createdBy string, request restapi.NewSmscRequest) (restapi.NewSmscResponse, error) {
+func (instance *DefaultSmscService) Add(createdBy string, request smsc.NewSmscRequest) (smsc.NewSmscResponse, error) {
 	request, err := instance.resolveCredentials(request)
 	if err != nil {
-		return restapi.NewSmscResponse{}, err
+		return smsc.NewSmscResponse{}, err
 	}
 	data := instance.modelFromRequest(request)
 	data.CreatedAt = time.Now()
@@ -35,7 +35,7 @@ func (instance *DefaultSmscService) Add(createdBy string, request restapi.NewSms
 	if err = instance.repository.Save(data); err != nil {
 		return instance.mapError(request, err)
 	}
-	response := restapi.NewSmscResponse{
+	response := smsc.NewSmscResponse{
 		NewSmscRequest: request,
 		Id:             data.Id,
 		CreatedAt:      data.CreatedAt,
@@ -49,7 +49,7 @@ func (instance *DefaultSmscService) Add(createdBy string, request restapi.NewSms
 	return response, nil
 }
 
-func (instance *DefaultSmscService) resolveCredentials(request restapi.NewSmscRequest) (restapi.NewSmscRequest, error) {
+func (instance *DefaultSmscService) resolveCredentials(request smsc.NewSmscRequest) (smsc.NewSmscRequest, error) {
 	var err error
 	_, err = instance.resolver.Get(request.Settings.Host.Username)
 	if err != nil {
@@ -59,15 +59,15 @@ func (instance *DefaultSmscService) resolveCredentials(request restapi.NewSmscRe
 	return request, err
 }
 
-func (instance *DefaultSmscService) mapError(request restapi.NewSmscRequest, causedBy error) (restapi.NewSmscResponse, error) {
+func (instance *DefaultSmscService) mapError(request smsc.NewSmscRequest, causedBy error) (smsc.NewSmscResponse, error) {
 	if prob, isConstraintError := causedBy.(*sdk.FieldConstraintError); isConstraintError {
 		if prob.Field == nameProperty || prob.Field == aliasProperty {
-			return restapi.NewSmscResponse{}, newUniquenessValidationError(prob.Field)
+			return smsc.NewSmscResponse{}, newUniquenessValidationError(prob.Field)
 		}
 	}
 	zap.L().Error("Cannot persist model.Smpp into sdk.SmppRepository", zap.String("name", request.Name),
 		zap.String("alias", request.Alias), zap.Error(causedBy))
-	return restapi.NewSmscResponse{}, causedBy
+	return smsc.NewSmscResponse{}, causedBy
 }
 
 func newUniquenessValidationError(field string) ValidationError {
@@ -78,7 +78,7 @@ func newUniquenessValidationError(field string) ValidationError {
 	}
 }
 
-func (instance *DefaultSmscService) modelFromRequest(request restapi.NewSmscRequest) model.Smpp {
+func (instance *DefaultSmscService) modelFromRequest(request smsc.NewSmscRequest) model.Smpp {
 	return model.Smpp{
 		Name:        request.Name,
 		Alias:       request.Alias,
@@ -90,7 +90,7 @@ func (instance *DefaultSmscService) modelFromRequest(request restapi.NewSmscRequ
 	}
 }
 
-func (instance *DefaultSmscService) settingsFromRequest(request restapi.NewSmscRequest) model.Settings {
+func (instance *DefaultSmscService) settingsFromRequest(request smsc.NewSmscRequest) model.Settings {
 	value := model.Settings{
 		SourceAddr:  request.Settings.SourceAddr,
 		ServiceType: request.Settings.ServiceType,

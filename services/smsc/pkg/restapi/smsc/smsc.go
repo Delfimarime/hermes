@@ -1,11 +1,11 @@
-package restapi
+package smsc
 
 import "time"
 
 const (
-	ReceiverType    SmscType = "RECEIVER"
-	TransmitterType SmscType = "TRANSMITTER"
-	TransceiverType SmscType = "TRANSCEIVER"
+	ReceiverType    Type = "RECEIVER"
+	TransmitterType Type = "TRANSMITTER"
+	TransceiverType Type = "TRANSCEIVER"
 )
 
 const (
@@ -13,7 +13,7 @@ const (
 	DeactivatedSmscState string = "DEACTIVATED"
 )
 
-type SmscType string
+type Type string
 
 type NewSmscRequest struct {
 	UpdateSmscRequest
@@ -28,11 +28,11 @@ type NewSmscResponse struct {
 }
 
 type UpdateSmscRequest struct {
-	Settings    SmscSettingsRequest `json:"settings" binding:"required"`
-	Name        string              `json:"name,omitempty" binding:"required,gte=3,lte=50"`
-	PoweredBy   string              `json:"powered_by,omitempty" binding:"omitempty,lte=45"`
-	Description string              `json:"description,omitempty" binding:"required,gte=2,lte=255"`
-	Type        SmscType            `json:"type" binding:"required,oneof=TRANSMITTER TRANSCEIVER RECEIVER"`
+	Settings    Settings `json:"settings" binding:"required"`
+	Name        string   `json:"name,omitempty" binding:"required,gte=3,lte=50"`
+	PoweredBy   string   `json:"powered_by,omitempty" binding:"omitempty,lte=45"`
+	Description string   `json:"description,omitempty" binding:"required,gte=2,lte=255"`
+	Type        Type     `json:"type" binding:"required,oneof=TRANSMITTER TRANSCEIVER RECEIVER"`
 }
 
 type UpdateSmscResponse struct {
@@ -41,7 +41,7 @@ type UpdateSmscResponse struct {
 	LastUpdatedBy string    `json:"last_modified_by,omitempty" binding:"required"`
 }
 
-type SmscSettingsRequest struct {
+type Settings struct {
 	Bind        *Bind     `json:"bind,omitempty"`
 	Merge       *Merge    `json:"merge,omitempty"`
 	Enquire     *Enquire  `json:"enquire,omitempty"`
@@ -80,7 +80,7 @@ type Merge struct {
 	CleanupInterval int64 `json:"cleanup_interval" binding:"required,gte=1000"`
 }
 
-type UpdateSmscSettingsRequest SmscSettingsRequest
+type UpdateSmscSettingsRequest Settings
 
 type UpdateSmscState struct {
 	Value string `json:"value" binding:"required,oneof=ACTIVATED DEACTIVATED"`
@@ -88,15 +88,15 @@ type UpdateSmscState struct {
 
 type GetSmscByIdResponse UpdateSmscResponse
 
-type SmscSearchRequest struct {
-	Cursor        string   `form:"cursor"`
-	CreatedBy     string   `form:"created_by"`
-	LastUpdatedBy string   `form:"last_updated_by"`
-	S             string   `form:"s" binding:"lte=50"`
-	PoweredBy     string   `form:"powered_by" binding:"lte=45"`
-	State         string   `form:"state"`
-	Type          SmscType `form:"type"`
-	Sort          string   `form:"sort"`
+type SearchCriteriaRequest struct {
+	Cursor        string `form:"cursor"`
+	CreatedBy     string `form:"created_by"`
+	LastUpdatedBy string `form:"last_updated_by"`
+	S             string `form:"s" binding:"lte=50"`
+	PoweredBy     string `form:"powered_by" binding:"lte=45"`
+	State         string `form:"state"`
+	Type          Type   `form:"type"`
+	Sort          string `form:"sort"`
 }
 
 func GetSmscSearchRequestSortOpts() []string {
@@ -108,10 +108,10 @@ func GetSmscSearchRequestSortOpts() []string {
 }
 
 type PaginatedSmsc struct {
-	Id          string   `json:"id,omitempty"`
-	Name        string   `json:"name,omitempty"`
-	Alias       string   `json:"alias,omitempty"`
-	PoweredBy   string   `json:"powered_by,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Type        SmscType `json:"type"`
+	Id          string `json:"id,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Alias       string `json:"alias,omitempty"`
+	PoweredBy   string `json:"powered_by,omitempty"`
+	Description string `json:"description,omitempty"`
+	Type        Type   `json:"type"`
 }

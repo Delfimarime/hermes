@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/delfimarime/hermes/services/smsc/pkg/restapi"
+	"github.com/delfimarime/hermes/services/smsc/pkg/restapi/smsc"
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"net/http"
@@ -24,11 +24,11 @@ const (
 
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-func createNewSmscSettingsRequest(f func(request *restapi.NewSmscRequest)) restapi.NewSmscRequest {
-	r := &restapi.NewSmscRequest{
-		UpdateSmscRequest: restapi.UpdateSmscRequest{
-			Settings: restapi.SmscSettingsRequest{
-				Host: restapi.Host{
+func createNewSmscSettingsRequest(f func(request *smsc.NewSmscRequest)) smsc.NewSmscRequest {
+	r := &smsc.NewSmscRequest{
+		UpdateSmscRequest: smsc.UpdateSmscRequest{
+			Settings: smsc.Settings{
+				Host: smsc.Host{
 					Username: "admin",
 					Password: "admin",
 					Address:  "localhost:4000",
@@ -36,7 +36,7 @@ func createNewSmscSettingsRequest(f func(request *restapi.NewSmscRequest)) resta
 			},
 			Name:        "raitonbl",
 			Description: "<description/>",
-			Type:        restapi.TransceiverType,
+			Type:        smsc.TransceiverType,
 		},
 		Alias: "raitonbl",
 	}
@@ -50,15 +50,15 @@ func TestSmscApi_New_and_expect_success(t *testing.T) {
 	doTestSmscApiNewWithSuccess(t, []struct {
 		name     string
 		username string
-		request  restapi.NewSmscRequest
+		request  smsc.NewSmscRequest
 	}{
 		{
 			name: "type=transmitter",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -66,7 +66,7 @@ func TestSmscApi_New_and_expect_success(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
@@ -74,11 +74,11 @@ func TestSmscApi_New_and_expect_success(t *testing.T) {
 		{
 			name:     "type=receiver",
 			username: "anonymous",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -86,18 +86,18 @@ func TestSmscApi_New_and_expect_success(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.ReceiverType,
+					Type:        smsc.ReceiverType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "type=transceiver",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -105,17 +105,17 @@ func TestSmscApi_New_and_expect_success(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransceiverType,
+					Type:        smsc.TransceiverType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "powered_by=nil",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -123,20 +123,20 @@ func TestSmscApi_New_and_expect_success(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransceiverType,
+					Type:        smsc.TransceiverType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "settings.bind.timeout=1000",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
-					Settings: restapi.SmscSettingsRequest{
-						Bind: &restapi.Bind{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
+					Settings: smsc.Settings{
+						Bind: &smsc.Bind{
 							Timeout: 1000,
 						},
-						Host: restapi.Host{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -144,7 +144,7 @@ func TestSmscApi_New_and_expect_success(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransceiverType,
+					Type:        smsc.TransceiverType,
 				},
 				Alias: "raitonbl",
 			},
@@ -155,15 +155,15 @@ func TestSmscApi_New_and_expect_success(t *testing.T) {
 func TestSmscApi_New_when_type_is_not_valid(t *testing.T) {
 	doTestSmscApiNewWithBadInput(t, []struct {
 		name    string
-		request restapi.NewSmscRequest
+		request smsc.NewSmscRequest
 	}{
 		{
 			name: "type=nil",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -177,11 +177,11 @@ func TestSmscApi_New_when_type_is_not_valid(t *testing.T) {
 		},
 		{
 			name: "type=<type/>",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -200,33 +200,33 @@ func TestSmscApi_New_when_type_is_not_valid(t *testing.T) {
 func TestSmscApi_New_when_name_is_not_valid(t *testing.T) {
 	doTestSmscApiNewWithBadInput(t, []struct {
 		name    string
-		request restapi.NewSmscRequest
+		request smsc.NewSmscRequest
 	}{
 		{
 			name: "name=nil",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
 						},
 					},
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "len(name)==2",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -234,19 +234,19 @@ func TestSmscApi_New_when_name_is_not_valid(t *testing.T) {
 					},
 					Name:        stringWithCharset(2),
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "len(name)==51",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -254,7 +254,7 @@ func TestSmscApi_New_when_name_is_not_valid(t *testing.T) {
 					},
 					Name:        stringWithCharset(51),
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
@@ -265,15 +265,15 @@ func TestSmscApi_New_when_name_is_not_valid(t *testing.T) {
 func TestSmscApi_New_when_alias_is_not_valid(t *testing.T) {
 	doTestSmscApiNewWithBadInput(t, []struct {
 		name    string
-		request restapi.NewSmscRequest
+		request smsc.NewSmscRequest
 	}{
 		{
 			name: "alias=nil",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -281,17 +281,17 @@ func TestSmscApi_New_when_alias_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 			},
 		},
 		{
 			name: "len(alias)==2",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -299,18 +299,18 @@ func TestSmscApi_New_when_alias_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: stringWithCharset(2),
 			},
 		},
 		{
 			name: "len(alias)==21",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -318,7 +318,7 @@ func TestSmscApi_New_when_alias_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: stringWithCharset(51),
 			},
@@ -329,33 +329,33 @@ func TestSmscApi_New_when_alias_is_not_valid(t *testing.T) {
 func TestSmscApi_New_when_description_is_not_valid(t *testing.T) {
 	doTestSmscApiNewWithBadInput(t, []struct {
 		name    string
-		request restapi.NewSmscRequest
+		request smsc.NewSmscRequest
 	}{
 		{
 			name: "description=nil",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
 						},
 					},
 					Name: "raitonbl",
-					Type: restapi.TransmitterType,
+					Type: smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "len(description)==1",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -363,18 +363,18 @@ func TestSmscApi_New_when_description_is_not_valid(t *testing.T) {
 					},
 					Description: stringWithCharset(1),
 					Name:        "raitonbl",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "len(description)==256",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -382,7 +382,7 @@ func TestSmscApi_New_when_description_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: stringWithCharset(256),
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
@@ -393,15 +393,15 @@ func TestSmscApi_New_when_description_is_not_valid(t *testing.T) {
 func TestSmscApi_New_when_source_addr_from_settings_is_not_valid(t *testing.T) {
 	doTestSmscApiNewWithBadInput(t, []struct {
 		name    string
-		request restapi.NewSmscRequest
+		request smsc.NewSmscRequest
 	}{
 		{
 			name: "settings.source_address=google.com",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -410,7 +410,7 @@ func TestSmscApi_New_when_source_addr_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
@@ -421,82 +421,82 @@ func TestSmscApi_New_when_source_addr_from_settings_is_not_valid(t *testing.T) {
 func TestSmscApi_New_when_host_from_settings_is_not_valid(t *testing.T) {
 	doTestSmscApiNewWithBadInput(t, []struct {
 		name    string
-		request restapi.NewSmscRequest
+		request smsc.NewSmscRequest
 	}{
 		{
 			name: "host=nil",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy:   "raitonbl.com",
-					Settings:    restapi.SmscSettingsRequest{},
+					Settings:    smsc.Settings{},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "host.username=nil",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Password: "admin",
 							Address:  "localhost:4000",
 						},
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "host.password=nil",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Address:  "localhost:4000",
 						},
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "host.address=nil",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 						},
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "host.address not hostname_port",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "google",
@@ -504,7 +504,7 @@ func TestSmscApi_New_when_host_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
@@ -515,18 +515,18 @@ func TestSmscApi_New_when_host_from_settings_is_not_valid(t *testing.T) {
 func TestSmscApi_New_when_bind_from_settings_is_not_valid(t *testing.T) {
 	doTestSmscApiNewWithBadInput(t, []struct {
 		name    string
-		request restapi.NewSmscRequest
+		request smsc.NewSmscRequest
 	}{
 		{
 			name: "bind.timeout=999",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Bind: &restapi.Bind{
+					Settings: smsc.Settings{
+						Bind: &smsc.Bind{
 							Timeout: 999,
 						},
-						Host: restapi.Host{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -534,19 +534,19 @@ func TestSmscApi_New_when_bind_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "bind.timeout=0",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Bind: &restapi.Bind{},
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Bind: &smsc.Bind{},
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -554,7 +554,7 @@ func TestSmscApi_New_when_bind_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
@@ -565,19 +565,19 @@ func TestSmscApi_New_when_bind_from_settings_is_not_valid(t *testing.T) {
 func TestSmscApi_New_when_enquire_from_settings_is_not_valid(t *testing.T) {
 	doTestSmscApiNewWithBadInput(t, []struct {
 		name    string
-		request restapi.NewSmscRequest
+		request smsc.NewSmscRequest
 	}{
 		{
 			name: "enquiry.link=999",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Enquire: &restapi.Enquire{
+					Settings: smsc.Settings{
+						Enquire: &smsc.Enquire{
 							Link:        999,
 							LinkTimeout: 1000,
 						},
-						Host: restapi.Host{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -585,21 +585,21 @@ func TestSmscApi_New_when_enquire_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "enquiry.link=0",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Enquire: &restapi.Enquire{
+					Settings: smsc.Settings{
+						Enquire: &smsc.Enquire{
 							LinkTimeout: 1000,
 						},
-						Host: restapi.Host{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -607,22 +607,22 @@ func TestSmscApi_New_when_enquire_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "enquiry.link_timeout=999",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Enquire: &restapi.Enquire{
+					Settings: smsc.Settings{
+						Enquire: &smsc.Enquire{
 							Link:        1000,
 							LinkTimeout: 999,
 						},
-						Host: restapi.Host{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -630,21 +630,21 @@ func TestSmscApi_New_when_enquire_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "enquiry.link_timeout=0",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Enquire: &restapi.Enquire{
+					Settings: smsc.Settings{
+						Enquire: &smsc.Enquire{
 							Link: 1000,
 						},
-						Host: restapi.Host{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -652,7 +652,7 @@ func TestSmscApi_New_when_enquire_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
@@ -663,18 +663,18 @@ func TestSmscApi_New_when_enquire_from_settings_is_not_valid(t *testing.T) {
 func TestSmscApi_New_when_response_from_settings_is_not_valid(t *testing.T) {
 	doTestSmscApiNewWithBadInput(t, []struct {
 		name    string
-		request restapi.NewSmscRequest
+		request smsc.NewSmscRequest
 	}{
 		{
 			name: "response.timeout=999",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Response: &restapi.Response{
+					Settings: smsc.Settings{
+						Response: &smsc.Response{
 							Timeout: 999,
 						},
-						Host: restapi.Host{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -682,19 +682,19 @@ func TestSmscApi_New_when_response_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "response.timeout=0",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Response: &restapi.Response{},
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Response: &smsc.Response{},
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -702,7 +702,7 @@ func TestSmscApi_New_when_response_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
@@ -713,19 +713,19 @@ func TestSmscApi_New_when_response_from_settings_is_not_valid(t *testing.T) {
 func TestSmscApi_New_when_merge_from_settings_is_not_valid(t *testing.T) {
 	doTestSmscApiNewWithBadInput(t, []struct {
 		name    string
-		request restapi.NewSmscRequest
+		request smsc.NewSmscRequest
 	}{
 		{
 			name: "merge.interval=999",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Merge: &restapi.Merge{
+					Settings: smsc.Settings{
+						Merge: &smsc.Merge{
 							Interval:        999,
 							CleanupInterval: 1000,
 						},
-						Host: restapi.Host{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -733,21 +733,21 @@ func TestSmscApi_New_when_merge_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "merge.interval=0",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Merge: &restapi.Merge{
+					Settings: smsc.Settings{
+						Merge: &smsc.Merge{
 							CleanupInterval: 1000,
 						},
-						Host: restapi.Host{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -755,22 +755,22 @@ func TestSmscApi_New_when_merge_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "merge.cleanup_interval=999",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Merge: &restapi.Merge{
+					Settings: smsc.Settings{
+						Merge: &smsc.Merge{
 							Interval:        1000,
 							CleanupInterval: 999,
 						},
-						Host: restapi.Host{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -778,21 +778,21 @@ func TestSmscApi_New_when_merge_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
 		},
 		{
 			name: "merge.cleanup_interval=0",
-			request: restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			request: smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Merge: &restapi.Merge{
+					Settings: smsc.Settings{
+						Merge: &smsc.Merge{
 							Interval: 1000,
 						},
-						Host: restapi.Host{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -800,7 +800,7 @@ func TestSmscApi_New_when_merge_from_settings_is_not_valid(t *testing.T) {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			},
@@ -823,7 +823,7 @@ func TestSmscApi_New_when_smsc_service_has_error(t *testing.T) {
 func doTestSmscApiNewWithSuccess(t *testing.T, arr []struct {
 	name     string
 	username string
-	request  restapi.NewSmscRequest
+	request  smsc.NewSmscRequest
 }) {
 	if arr == nil {
 		return
@@ -844,7 +844,7 @@ func doTestSmscApiNewWithSuccess(t *testing.T, arr []struct {
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
 			require.Equal(t, 200, w.Code)
-			smscResponse := restapi.NewSmscResponse{}
+			smscResponse := smsc.NewSmscResponse{}
 			if err := json.Unmarshal([]byte(w.Body.String()), &smscResponse); err != nil {
 				t.Fatal(err)
 			}
@@ -899,7 +899,7 @@ func doTestSmscApiNewWithSuccess(t *testing.T, arr []struct {
 
 func doTestSmscApiNewWithBadInput(t *testing.T, arr []struct {
 	name    string
-	request restapi.NewSmscRequest
+	request smsc.NewSmscRequest
 }) {
 	if arr == nil {
 		return
@@ -943,11 +943,11 @@ func doTestSmscApiNewAndCatchError(t *testing.T, arr []struct {
 	for _, definition := range arr {
 		smscApi.service.(*TestSmscService).err = definition.err
 		t.Run(definition.name, func(t *testing.T) {
-			smscRequest := restapi.NewSmscRequest{
-				UpdateSmscRequest: restapi.UpdateSmscRequest{
+			smscRequest := smsc.NewSmscRequest{
+				UpdateSmscRequest: smsc.UpdateSmscRequest{
 					PoweredBy: "raitonbl.com",
-					Settings: restapi.SmscSettingsRequest{
-						Host: restapi.Host{
+					Settings: smsc.Settings{
+						Host: smsc.Host{
 							Username: "admin",
 							Password: "admin",
 							Address:  "localhost:4000",
@@ -955,7 +955,7 @@ func doTestSmscApiNewAndCatchError(t *testing.T, arr []struct {
 					},
 					Name:        "raitonbl",
 					Description: "<description/>",
-					Type:        restapi.TransmitterType,
+					Type:        smsc.TransmitterType,
 				},
 				Alias: "raitonbl",
 			}

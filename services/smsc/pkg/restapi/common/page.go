@@ -1,4 +1,4 @@
-package restapi
+package common
 
 type ResponsePage[T any] struct {
 	Self  string `json:"self,omitempty"`

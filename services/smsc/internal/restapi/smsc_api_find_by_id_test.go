@@ -3,7 +3,7 @@ package restapi
 import (
 	"fmt"
 	"github.com/delfimarime/hermes/services/smsc/internal/repository/sdk"
-	"github.com/delfimarime/hermes/services/smsc/pkg/restapi"
+	"github.com/delfimarime/hermes/services/smsc/pkg/restapi/smsc"
 	"github.com/google/uuid"
 	"net/http"
 	"net/http/httptest"
@@ -16,14 +16,14 @@ type FindByIdTestConfiguration struct {
 	username   string
 	target     string
 	err        error
-	response   restapi.GetSmscByIdResponse
+	response   smsc.GetSmscByIdResponse
 	AssertWith func(*testing.T, *httptest.ResponseRecorder, string) error
 }
 
 func TestSmscApi_FindById(t *testing.T) {
 	id := uuid.New().String()
-	response := restapi.GetSmscByIdResponse{
-		NewSmscResponse: restapi.NewSmscResponse{
+	response := smsc.GetSmscByIdResponse{
+		NewSmscResponse: smsc.NewSmscResponse{
 			NewSmscRequest: createNewSmscSettingsRequest(nil),
 			Id:             id,
 			CreatedBy:      "dmarime",

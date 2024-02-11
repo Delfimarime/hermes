@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/delfimarime/hermes/services/smsc/pkg/restapi"
+	"github.com/delfimarime/hermes/services/smsc/pkg/restapi/smsc"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
@@ -16,8 +16,8 @@ type SetStateByIdTestConfiguration struct {
 	username   string
 	target     string
 	err        error
-	request    restapi.UpdateSmscState
-	AssertWith func(*testing.T, *httptest.ResponseRecorder, string, restapi.UpdateSmscState) error
+	request    smsc.UpdateSmscState
+	AssertWith func(*testing.T, *httptest.ResponseRecorder, string, smsc.UpdateSmscState) error
 }
 
 func TestSmscApi_SetStateById(t *testing.T) {
@@ -25,16 +25,16 @@ func TestSmscApi_SetStateById(t *testing.T) {
 		{
 			name:   "value=ACTIVATED",
 			target: "0",
-			request: restapi.UpdateSmscState{
-				Value: restapi.ActivatedSmscState,
+			request: smsc.UpdateSmscState{
+				Value: smsc.ActivatedSmscState,
 			},
 			AssertWith: nil,
 		},
 		{
 			name:   "value=DEACTIVATED",
 			target: "0",
-			request: restapi.UpdateSmscState{
-				Value: restapi.DeactivatedSmscState,
+			request: smsc.UpdateSmscState{
+				Value: smsc.DeactivatedSmscState,
 			},
 			AssertWith: nil,
 		},
@@ -46,13 +46,13 @@ func TestSmscApi_SetStateById_when_value_not_valid(t *testing.T) {
 		{
 			name:       "value=nil",
 			target:     "0",
-			request:    restapi.UpdateSmscState{},
+			request:    smsc.UpdateSmscState{},
 			AssertWith: nil,
 		},
 		{
 			name:   "value=<value/>",
 			target: "0",
-			request: restapi.UpdateSmscState{
+			request: smsc.UpdateSmscState{
 				Value: "<value/>",
 			},
 			AssertWith: nil,
@@ -60,7 +60,7 @@ func TestSmscApi_SetStateById_when_value_not_valid(t *testing.T) {
 	})
 }
 
-func executeSetStateByIdTest(t *testing.T, assertWith func(*testing.T, *httptest.ResponseRecorder, string, restapi.UpdateSmscState) error, arr []SetStateByIdTestConfiguration) {
+func executeSetStateByIdTest(t *testing.T, assertWith func(*testing.T, *httptest.ResponseRecorder, string, smsc.UpdateSmscState) error, arr []SetStateByIdTestConfiguration) {
 	if arr == nil {
 		return
 	}
@@ -93,8 +93,8 @@ func executeSetStateByIdTest(t *testing.T, assertWith func(*testing.T, *httptest
 	}
 }
 
-func assertUpdateSmscStateResponseWhenNoContent(t *testing.T, w *httptest.ResponseRecorder, username string, req restapi.UpdateSmscState) error {
-	return assertResponseWhenNoContent[restapi.UpdateSmscState](t, w, username, req)
+func assertUpdateSmscStateResponseWhenNoContent(t *testing.T, w *httptest.ResponseRecorder, username string, req smsc.UpdateSmscState) error {
+	return assertResponseWhenNoContent[smsc.UpdateSmscState](t, w, username, req)
 }
 
 func assertResponseWhenNoContent[T any](t *testing.T, w *httptest.ResponseRecorder, _ string, _ T) error {
@@ -103,6 +103,6 @@ func assertResponseWhenNoContent[T any](t *testing.T, w *httptest.ResponseRecord
 	return nil
 }
 
-func assertUpdateSmscStateResponseWhenBadInput(t *testing.T, w *httptest.ResponseRecorder, username string, settings restapi.UpdateSmscState) error {
-	return createAssertResponseWhenBadInput[restapi.UpdateSmscState](EditSmscStateOperationId)(t, w, username, settings)
+func assertUpdateSmscStateResponseWhenBadInput(t *testing.T, w *httptest.ResponseRecorder, username string, settings smsc.UpdateSmscState) error {
+	return createAssertResponseWhenBadInput[smsc.UpdateSmscState](EditSmscStateOperationId)(t, w, username, settings)
 }

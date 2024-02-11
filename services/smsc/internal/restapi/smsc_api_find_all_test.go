@@ -3,7 +3,8 @@ package restapi
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/delfimarime/hermes/services/smsc/pkg/restapi"
+	"github.com/delfimarime/hermes/services/smsc/pkg/restapi/common"
+	"github.com/delfimarime/hermes/services/smsc/pkg/restapi/smsc"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
@@ -17,9 +18,9 @@ type FindAllTestConfiguration struct {
 	name           string
 	username       string
 	err            error
-	searchCriteria *restapi.SmscSearchRequest
-	response       restapi.Page[restapi.PaginatedSmsc]
-	assertWith     func(*testing.T, *httptest.ResponseRecorder, restapi.Page[restapi.PaginatedSmsc]) error
+	searchCriteria *smsc.SearchCriteriaRequest
+	response       common.Page[smsc.PaginatedSmsc]
+	assertWith     func(*testing.T, *httptest.ResponseRecorder, common.Page[smsc.PaginatedSmsc]) error
 }
 
 func TestSmscApi_FindAll(t *testing.T) {
@@ -29,15 +30,15 @@ func TestSmscApi_FindAll(t *testing.T) {
 			username:       "",
 			err:            nil,
 			searchCriteria: nil,
-			response: restapi.Page[restapi.PaginatedSmsc]{
-				Items: []restapi.PaginatedSmsc{
+			response: common.Page[smsc.PaginatedSmsc]{
+				Items: []smsc.PaginatedSmsc{
 					{
 						Id:          "1",
 						Name:        "one",
 						Alias:       "one",
 						PoweredBy:   "one",
 						Description: "one",
-						Type:        restapi.TransmitterType,
+						Type:        smsc.TransmitterType,
 					},
 					{
 						Id:          "2",
@@ -45,7 +46,7 @@ func TestSmscApi_FindAll(t *testing.T) {
 						Alias:       "two",
 						PoweredBy:   "two",
 						Description: "two",
-						Type:        restapi.ReceiverType,
+						Type:        smsc.ReceiverType,
 					},
 					{
 						Id:          "3",
@@ -53,7 +54,7 @@ func TestSmscApi_FindAll(t *testing.T) {
 						Alias:       "three",
 						PoweredBy:   "three",
 						Description: "three",
-						Type:        restapi.TransceiverType,
+						Type:        smsc.TransceiverType,
 					},
 				},
 				Self: "1",
@@ -68,28 +69,28 @@ func TestSmscApi_FindAll_when_bad_search(t *testing.T) {
 	executeFindAllTest(t, assertFindAllWhenBadInput, []FindAllTestConfiguration{
 		{
 			name:           "len(searchCriteria.s)>50",
-			searchCriteria: &restapi.SmscSearchRequest{S: stringWithCharset(51)},
+			searchCriteria: &smsc.SearchCriteriaRequest{S: stringWithCharset(51)},
 		},
 		{
 			name:           "len(searchCriteria.powered_by)>45",
-			searchCriteria: &restapi.SmscSearchRequest{PoweredBy: stringWithCharset(46)},
+			searchCriteria: &smsc.SearchCriteriaRequest{PoweredBy: stringWithCharset(46)},
 		},
 		{
 			name:           "searchCriteria.state=<value/>",
-			searchCriteria: &restapi.SmscSearchRequest{State: stringWithCharset(46)},
+			searchCriteria: &smsc.SearchCriteriaRequest{State: stringWithCharset(46)},
 		},
 		{
 			name:           "searchCriteria.type=<value/>",
-			searchCriteria: &restapi.SmscSearchRequest{Type: restapi.SmscType(stringWithCharset(46))},
+			searchCriteria: &smsc.SearchCriteriaRequest{Type: smsc.Type(stringWithCharset(46))},
 		},
 		{
 			name:           "searchCriteria.sort=<value/>",
-			searchCriteria: &restapi.SmscSearchRequest{Sort: stringWithCharset(46)},
+			searchCriteria: &smsc.SearchCriteriaRequest{Sort: stringWithCharset(46)},
 		},
 	})
 }
 
-func executeFindAllTest(t *testing.T, assertWith func(*testing.T, *httptest.ResponseRecorder, restapi.Page[restapi.PaginatedSmsc]) error, arr []FindAllTestConfiguration) {
+func executeFindAllTest(t *testing.T, assertWith func(*testing.T, *httptest.ResponseRecorder, common.Page[smsc.PaginatedSmsc]) error, arr []FindAllTestConfiguration) {
 	if arr == nil {
 		return
 	}
@@ -122,7 +123,7 @@ func executeFindAllTest(t *testing.T, assertWith func(*testing.T, *httptest.Resp
 	}
 }
 
-func getEndpointURL(endpoint string, criteria *restapi.SmscSearchRequest) string {
+func getEndpointURL(endpoint string, criteria *smsc.SearchCriteriaRequest) string {
 	if criteria == nil {
 		return endpoint
 	}
@@ -149,10 +150,10 @@ func getEndpointURL(endpoint string, criteria *restapi.SmscSearchRequest) string
 	return sb.String()
 }
 
-func assertFindAllWhenOK(t *testing.T, w *httptest.ResponseRecorder, originalPage restapi.Page[restapi.PaginatedSmsc]) error {
+func assertFindAllWhenOK(t *testing.T, w *httptest.ResponseRecorder, originalPage common.Page[smsc.PaginatedSmsc]) error {
 	fmt.Println(w.Code, w.Body.String())
 	require.Equal(t, 200, w.Code)
-	page := restapi.ResponsePage[restapi.PaginatedSmsc]{}
+	page := common.ResponsePage[smsc.PaginatedSmsc]{}
 	if err := json.Unmarshal([]byte(w.Body.String()), &page); err != nil {
 		return err
 	}
@@ -171,6 +172,6 @@ func assertFindAllWhenOK(t *testing.T, w *httptest.ResponseRecorder, originalPag
 	return nil
 }
 
-func assertFindAllWhenBadInput(t *testing.T, w *httptest.ResponseRecorder, _ restapi.Page[restapi.PaginatedSmsc]) error {
+func assertFindAllWhenBadInput(t *testing.T, w *httptest.ResponseRecorder, _ common.Page[smsc.PaginatedSmsc]) error {
 	return createAssertResponseBindingWhenBadInput[any](GetSmscPageOperationId, "query")(t, w, "", nil)
 }

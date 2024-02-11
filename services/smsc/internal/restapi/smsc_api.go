@@ -3,7 +3,8 @@ package restapi
 import (
 	"errors"
 	"github.com/delfimarime/hermes/services/smsc/internal/service/smsc"
-	"github.com/delfimarime/hermes/services/smsc/pkg/restapi"
+	"github.com/delfimarime/hermes/services/smsc/pkg/restapi/common"
+	smsc2 "github.com/delfimarime/hermes/services/smsc/pkg/restapi/smsc"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,7 +22,7 @@ type SmscApi struct {
 // Returns:
 // - error: an error if the operation fails, nil otherwise
 func (instance *SmscApi) New(operationId, username string, c *gin.Context) error {
-	request, err := readBody[restapi.NewSmscRequest](operationId, c)
+	request, err := readBody[smsc2.NewSmscRequest](operationId, c)
 	if err != nil {
 		return err
 	}
@@ -42,26 +43,26 @@ func (instance *SmscApi) New(operationId, username string, c *gin.Context) error
 // Returns:
 // - error: an error if the operation fails, nil otherwise
 func (instance *SmscApi) FindAll(operationId string, c *gin.Context) error {
-	request, err := readQuery[restapi.SmscSearchRequest](operationId, c)
+	request, err := readQuery[smsc2.SearchCriteriaRequest](operationId, c)
 	if err != nil {
 		return err
 	}
-	if request.Type != "" && !AnyOf(string(request.Type), string(restapi.TransmitterType),
-		string(restapi.ReceiverType), string(restapi.TransceiverType)) {
+	if request.Type != "" && !AnyOf(string(request.Type), string(smsc2.TransmitterType),
+		string(smsc2.ReceiverType), string(smsc2.TransceiverType)) {
 		return GoValidationError{
-			Err:  WebpageInputError(errors.New("SmscSearchRequest.Type, Field validation for 'Type' failed on the 'oneof' tag")),
+			Err:  WebpageInputError(errors.New("SearchCriteriaRequest.Type, Field validation for 'Type' failed on the 'oneof' tag")),
 			From: "query",
 		}
 	}
-	if request.State != "" && !AnyOf(request.State, restapi.ActivatedSmscState, restapi.DeactivatedSmscState) {
+	if request.State != "" && !AnyOf(request.State, smsc2.ActivatedSmscState, smsc2.DeactivatedSmscState) {
 		return GoValidationError{
-			Err:  WebpageInputError(errors.New("SmscSearchRequest.State, Field validation for 'State' failed on the 'oneof' tag")),
+			Err:  WebpageInputError(errors.New("SearchCriteriaRequest.State, Field validation for 'State' failed on the 'oneof' tag")),
 			From: "query",
 		}
 	}
-	if request.Sort != "" && !AnyOf(request.Sort, restapi.GetSmscSearchRequestSortOpts()...) {
+	if request.Sort != "" && !AnyOf(request.Sort, smsc2.GetSmscSearchRequestSortOpts()...) {
 		return GoValidationError{
-			Err:  WebpageInputError(errors.New("SmscSearchRequest.Sort, Field validation for 'Sort' failed on the 'oneof' tag")),
+			Err:  WebpageInputError(errors.New("SearchCriteriaRequest.Sort, Field validation for 'Sort' failed on the 'oneof' tag")),
 			From: "query",
 		}
 	}
@@ -69,7 +70,7 @@ func (instance *SmscApi) FindAll(operationId string, c *gin.Context) error {
 	if err != nil {
 		return err
 	}
-	c.JSON(200, restapi.ResponsePage[restapi.PaginatedSmsc]{
+	c.JSON(200, common.ResponsePage[smsc2.PaginatedSmsc]{
 		Self:  page.Self,
 		Next:  page.Next,
 		Items: page.Items,
@@ -105,7 +106,7 @@ func (instance *SmscApi) FindById(c *gin.Context) error {
 // Returns:
 // - error: an error if the operation fails, nil otherwise
 func (instance *SmscApi) EditById(operationId string, username string, c *gin.Context) error {
-	request, err := readBody[restapi.UpdateSmscRequest](operationId, c)
+	request, err := readBody[smsc2.UpdateSmscRequest](operationId, c)
 	if err != nil {
 		return err
 	}
@@ -127,7 +128,7 @@ func (instance *SmscApi) EditById(operationId string, username string, c *gin.Co
 // Returns:
 // - error: an error if the operation fails, nil otherwise
 func (instance *SmscApi) EditStateById(operationId string, username string, c *gin.Context) error {
-	request, err := readBody[restapi.UpdateSmscState](operationId, c)
+	request, err := readBody[smsc2.UpdateSmscState](operationId, c)
 	if err != nil {
 		return err
 	}
@@ -149,7 +150,7 @@ func (instance *SmscApi) EditStateById(operationId string, username string, c *g
 // Returns:
 // - error: an error if the operation fails, nil otherwise
 func (instance *SmscApi) EditSettingsById(operationId, username string, c *gin.Context) error {
-	request, err := readBody[restapi.UpdateSmscSettingsRequest](operationId, c)
+	request, err := readBody[smsc2.UpdateSmscSettingsRequest](operationId, c)
 	if err != nil {
 		return err
 	}

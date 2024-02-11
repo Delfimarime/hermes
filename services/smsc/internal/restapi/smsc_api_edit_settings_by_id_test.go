@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/delfimarime/hermes/services/smsc/pkg/restapi"
+	"github.com/delfimarime/hermes/services/smsc/pkg/restapi/smsc"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
@@ -16,8 +16,8 @@ type EditByTestSettingsConfiguration struct {
 	username   string
 	target     string
 	err        error
-	request    restapi.UpdateSmscSettingsRequest
-	AssertWith func(*testing.T, *httptest.ResponseRecorder, string, restapi.UpdateSmscSettingsRequest) error
+	request    smsc.UpdateSmscSettingsRequest
+	AssertWith func(*testing.T, *httptest.ResponseRecorder, string, smsc.UpdateSmscSettingsRequest) error
 }
 
 func TestSmscApi_EditSettingsById(t *testing.T) {
@@ -31,8 +31,8 @@ func TestSmscApi_EditSettingsById(t *testing.T) {
 		{
 			name:   "bind.timeout=1000",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Bind = &restapi.Bind{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Bind = &smsc.Bind{
 					Timeout: 1000,
 				}
 			}),
@@ -46,7 +46,7 @@ func TestSmscApi_EditSettingsById_when_source_addr_from_settings_is_not_valid(t 
 		{
 			name:   "source_address=google.com",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
 				r.SourceAddr = "google.com"
 			}),
 			AssertWith: nil,
@@ -60,15 +60,15 @@ func TestSmscApi_EditSettingsById_when_host_from_settings_is_not_valid(t *testin
 		{
 			name:   "settings.host=nil",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Host = restapi.Host{}
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Host = smsc.Host{}
 			}),
 			AssertWith: nil,
 		},
 		{
 			name:   "host.username=nil",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
 				r.Host.Username = ""
 			}),
 			AssertWith: nil,
@@ -76,7 +76,7 @@ func TestSmscApi_EditSettingsById_when_host_from_settings_is_not_valid(t *testin
 		{
 			name:   "host.password=nil",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
 				r.Host.Password = ""
 			}),
 			AssertWith: nil,
@@ -84,7 +84,7 @@ func TestSmscApi_EditSettingsById_when_host_from_settings_is_not_valid(t *testin
 		{
 			name:   "host.address=nil",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
 				r.Host.Address = ""
 			}),
 			AssertWith: nil,
@@ -92,7 +92,7 @@ func TestSmscApi_EditSettingsById_when_host_from_settings_is_not_valid(t *testin
 		{
 			name:   "host.address not hostname_port",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
 				r.Host.Address = "google.com"
 			}),
 			AssertWith: nil,
@@ -106,8 +106,8 @@ func TestSmscApi_EditSettingsById_when_bind_from_settings_is_not_valid(t *testin
 		{
 			name:   "bind.timeout=999",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Bind = &restapi.Bind{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Bind = &smsc.Bind{
 					Timeout: 999,
 				}
 			}),
@@ -116,8 +116,8 @@ func TestSmscApi_EditSettingsById_when_bind_from_settings_is_not_valid(t *testin
 		{
 			name:   "bind.timeout=0",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Bind = &restapi.Bind{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Bind = &smsc.Bind{
 					Timeout: 0,
 				}
 			}),
@@ -131,8 +131,8 @@ func TestSmscApi_EditSettingsById_when_enquire_from_settings_is_not_valid(t *tes
 		{
 			name:   "enquiry.link=999",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Enquire = &restapi.Enquire{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Enquire = &smsc.Enquire{
 					Link:        999,
 					LinkTimeout: 1000,
 				}
@@ -142,8 +142,8 @@ func TestSmscApi_EditSettingsById_when_enquire_from_settings_is_not_valid(t *tes
 		{
 			name:   "enquiry.link=0",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Enquire = &restapi.Enquire{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Enquire = &smsc.Enquire{
 					Link:        0,
 					LinkTimeout: 1000,
 				}
@@ -153,8 +153,8 @@ func TestSmscApi_EditSettingsById_when_enquire_from_settings_is_not_valid(t *tes
 		{
 			name:   "enquiry.link_timeout=999",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Enquire = &restapi.Enquire{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Enquire = &smsc.Enquire{
 					Link:        1000,
 					LinkTimeout: 999,
 				}
@@ -164,8 +164,8 @@ func TestSmscApi_EditSettingsById_when_enquire_from_settings_is_not_valid(t *tes
 		{
 			name:   "enquiry.link_timeout=0",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Enquire = &restapi.Enquire{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Enquire = &smsc.Enquire{
 					Link:        1000,
 					LinkTimeout: 999,
 				}
@@ -180,8 +180,8 @@ func TestSmscApi_EditSettingsById_when_response_from_settings_is_not_valid(t *te
 		{
 			name:   "response.timeout=999",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Response = &restapi.Response{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Response = &smsc.Response{
 					Timeout: 999,
 				}
 			}),
@@ -190,8 +190,8 @@ func TestSmscApi_EditSettingsById_when_response_from_settings_is_not_valid(t *te
 		{
 			name:   "response.timeout=0",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Response = &restapi.Response{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Response = &smsc.Response{
 					Timeout: 0,
 				}
 			}),
@@ -205,8 +205,8 @@ func TestSmscApi_EditSettingsById_when_merge_from_settings_is_not_valid(t *testi
 		{
 			name:   "merge.interval=999",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Merge = &restapi.Merge{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Merge = &smsc.Merge{
 					Interval:        999,
 					CleanupInterval: 1000,
 				}
@@ -216,8 +216,8 @@ func TestSmscApi_EditSettingsById_when_merge_from_settings_is_not_valid(t *testi
 		{
 			name:   "merge.interval=0",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Merge = &restapi.Merge{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Merge = &smsc.Merge{
 					Interval:        0,
 					CleanupInterval: 1000,
 				}
@@ -227,8 +227,8 @@ func TestSmscApi_EditSettingsById_when_merge_from_settings_is_not_valid(t *testi
 		{
 			name:   "merge.cleanup_interval=999",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Merge = &restapi.Merge{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Merge = &smsc.Merge{
 					Interval:        1000,
 					CleanupInterval: 999,
 				}
@@ -238,8 +238,8 @@ func TestSmscApi_EditSettingsById_when_merge_from_settings_is_not_valid(t *testi
 		{
 			name:   "merge.cleanup_interval=0",
 			target: "0",
-			request: createUpdateSmscSettingsRequest(func(r *restapi.UpdateSmscSettingsRequest) {
-				r.Merge = &restapi.Merge{
+			request: createUpdateSmscSettingsRequest(func(r *smsc.UpdateSmscSettingsRequest) {
+				r.Merge = &smsc.Merge{
 					Interval:        1000,
 					CleanupInterval: 0,
 				}
@@ -249,9 +249,9 @@ func TestSmscApi_EditSettingsById_when_merge_from_settings_is_not_valid(t *testi
 	})
 }
 
-func createUpdateSmscSettingsRequest(f func(request *restapi.UpdateSmscSettingsRequest)) restapi.UpdateSmscSettingsRequest {
-	r := &restapi.UpdateSmscSettingsRequest{
-		Host: restapi.Host{
+func createUpdateSmscSettingsRequest(f func(request *smsc.UpdateSmscSettingsRequest)) smsc.UpdateSmscSettingsRequest {
+	r := &smsc.UpdateSmscSettingsRequest{
+		Host: smsc.Host{
 			Username: "admin",
 			Password: "admin",
 			Address:  "localhost:4000",
@@ -263,7 +263,7 @@ func createUpdateSmscSettingsRequest(f func(request *restapi.UpdateSmscSettingsR
 	return *r
 }
 
-func executeEditSettingsByIdTest(t *testing.T, assertWith func(*testing.T, *httptest.ResponseRecorder, string, restapi.UpdateSmscSettingsRequest) error, arr []EditByTestSettingsConfiguration) {
+func executeEditSettingsByIdTest(t *testing.T, assertWith func(*testing.T, *httptest.ResponseRecorder, string, smsc.UpdateSmscSettingsRequest) error, arr []EditByTestSettingsConfiguration) {
 	if arr == nil {
 		return
 	}
@@ -294,11 +294,11 @@ func executeEditSettingsByIdTest(t *testing.T, assertWith func(*testing.T, *http
 	}
 }
 
-func assertUpdateSmscSettingsResponseWhenBadInput(t *testing.T, w *httptest.ResponseRecorder, username string, settings restapi.UpdateSmscSettingsRequest) error {
-	return createAssertResponseWhenBadInput[restapi.UpdateSmscSettingsRequest](EditSmscSettingsId)(t, w, username, settings)
+func assertUpdateSmscSettingsResponseWhenBadInput(t *testing.T, w *httptest.ResponseRecorder, username string, settings smsc.UpdateSmscSettingsRequest) error {
+	return createAssertResponseWhenBadInput[smsc.UpdateSmscSettingsRequest](EditSmscSettingsId)(t, w, username, settings)
 }
 
-func assertUpdateSmscResponseWhenNoContent(t *testing.T, w *httptest.ResponseRecorder, _ string, _ restapi.UpdateSmscSettingsRequest) error {
+func assertUpdateSmscResponseWhenNoContent(t *testing.T, w *httptest.ResponseRecorder, _ string, _ smsc.UpdateSmscSettingsRequest) error {
 	fmt.Println(w.Code, w.Body.String())
 	require.Equal(t, 204, w.Code)
 	return nil

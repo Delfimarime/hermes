@@ -1,7 +1,9 @@
 package asyncapi
 
-import "github.com/delfimarime/hermes/services/smsc/pkg/restapi"
+import (
+	"github.com/delfimarime/hermes/services/smsc/pkg/restapi/smsc"
+)
 
 type SmppChannel interface {
-	SubmitSmscAddedEvent(event restapi.NewSmscResponse) error
+	SubmitSmscAddedEvent(event smsc.NewSmscResponse) error
 }

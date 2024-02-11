@@ -1,6 +1,9 @@
 package smsc
 
-import "github.com/delfimarime/hermes/services/smsc/pkg/restapi"
+import (
+	"github.com/delfimarime/hermes/services/smsc/pkg/restapi/common"
+	"github.com/delfimarime/hermes/services/smsc/pkg/restapi/smsc"
+)
 
 // ManagementService defines an interface for managing SMS Communication Centers (SMSC).
 type ManagementService interface {
@@ -13,7 +16,7 @@ type ManagementService interface {
 	// Returns:
 	//  - restapi.NewSmscResponse: that represents the newly created SMSC
 	//  - error: an error if the operation fails, nil otherwise
-	Add(username string, request restapi.NewSmscRequest) (restapi.NewSmscResponse, error)
+	Add(username string, request smsc.NewSmscRequest) (smsc.NewSmscResponse, error)
 
 	// FindAll retrieves a page of SMSC that match given criteria
 	//
@@ -23,7 +26,7 @@ type ManagementService interface {
 	// Returns:
 	//  - restapi.Page: that has restapi.PaginatedSmsc representing SMSCs
 	//  - error: an error if the operation fails, nil otherwise
-	FindAll(request restapi.SmscSearchRequest) (restapi.Page[restapi.PaginatedSmsc], error)
+	FindAll(request smsc.SearchCriteriaRequest) (common.Page[smsc.PaginatedSmsc], error)
 
 	// FindById retrieves an SMSC with a specific id
 	//
@@ -32,7 +35,7 @@ type ManagementService interface {
 	//
 	// Returns:
 	//  - error: an error if the operation fails, nil otherwise
-	FindById(id string) (restapi.GetSmscByIdResponse, error)
+	FindById(id string) (smsc.GetSmscByIdResponse, error)
 
 	// EditById modifies an SMSC with a specific id
 	//
@@ -44,7 +47,7 @@ type ManagementService interface {
 	// Returns:
 	//  - restapi.UpdateSmscResponse: that represents the SMSC after apply the configuration
 	//  - error: an error if the operation fails, nil otherwise
-	EditById(username string, id string, request restapi.UpdateSmscRequest) (restapi.UpdateSmscResponse, error)
+	EditById(username string, id string, request smsc.UpdateSmscRequest) (smsc.UpdateSmscResponse, error)
 
 	// EditSettingsById modifies an SMSC with a specific id, updating its settings
 	//
@@ -55,7 +58,7 @@ type ManagementService interface {
 	//
 	// Returns:
 	//  - error: an error if the operation fails, nil otherwise
-	EditSettingsById(username string, id string, request restapi.UpdateSmscSettingsRequest) error
+	EditSettingsById(username string, id string, request smsc.UpdateSmscSettingsRequest) error
 
 	// EditStateById modifies an SMSC with a specific id, updating its state
 	//
@@ -66,7 +69,7 @@ type ManagementService interface {
 	//
 	// Returns:
 	//  - error: an error if the operation fails, nil otherwise
-	EditStateById(username string, id string, request restapi.UpdateSmscState) error
+	EditStateById(username string, id string, request smsc.UpdateSmscState) error
 
 	// RemoveById removes an SMSC with a specific id
 	//

@@ -2,13 +2,13 @@ package restapi
 
 import (
 	"errors"
-	"github.com/delfimarime/hermes/services/smsc/internal/sdk"
+	"github.com/delfimarime/hermes/services/smsc/internal/service/smsc"
 	"github.com/delfimarime/hermes/services/smsc/pkg/restapi"
 	"github.com/gin-gonic/gin"
 )
 
 type SmscApi struct {
-	service sdk.SmscService
+	service smsc.ManagementService
 }
 
 // New registers a new SMSC.

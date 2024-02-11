@@ -1,9 +1,9 @@
-package sdk
+package smsc
 
 import "github.com/delfimarime/hermes/services/smsc/pkg/restapi"
 
-// SmscService defines an interface for managing SMS Communication Centers (SMSC).
-type SmscService interface {
+// ManagementService defines an interface for managing SMS Communication Centers (SMSC).
+type ManagementService interface {
 	// Add creates a new SMSC from the provided configuration
 	//
 	// Parameters:

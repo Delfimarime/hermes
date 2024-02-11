@@ -94,12 +94,21 @@ type SmscSearchRequest struct {
 	LastUpdatedBy string   `form:"last_updated_by"`
 	S             string   `form:"s" binding:"lte=50"`
 	PoweredBy     string   `form:"powered_by" binding:"lte=45"`
-	State         string   `form:"state" binding:"oneof=ACTIVATED DEACTIVATED"`
-	Type          SmscType `form:"type" binding:"oneof=TRANSMITTER TRANSCEIVER RECEIVER"`
-	Sort          string   `form:"sort" binding:"oneof=+name -name +created_by -created_at +last_modified_at -last_modified_at +state -state +powered_by -powered_by"`
+	State         string   `form:"state"`
+	Type          SmscType `form:"type"`
+	Sort          string   `form:"sort"`
+}
+
+func GetSmscSearchRequestSortOpts() []string {
+	return []string{
+		"+name", "-name", "+created_by", "-created_at",
+		"+last_modified_at", "-last_modified_at", "+state", "-state",
+		"+powered_by", "-powered_by",
+	}
 }
 
 type PaginatedSmsc struct {
+	Id          string   `json:"id,omitempty"`
 	Name        string   `json:"name,omitempty"`
 	Alias       string   `json:"alias,omitempty"`
 	PoweredBy   string   `json:"powered_by,omitempty"`

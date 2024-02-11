@@ -1,6 +1,7 @@
 package restapi
 
 import (
+	"errors"
 	"github.com/delfimarime/hermes/services/smsc/internal/sdk"
 	"github.com/delfimarime/hermes/services/smsc/pkg/restapi"
 	"github.com/gin-gonic/gin"
@@ -44,6 +45,25 @@ func (instance *SmscApi) FindAll(operationId string, c *gin.Context) error {
 	request, err := readQuery[restapi.SmscSearchRequest](operationId, c)
 	if err != nil {
 		return err
+	}
+	if request.Type != "" && !AnyOf(string(request.Type), string(restapi.TransmitterType),
+		string(restapi.ReceiverType), string(restapi.TransceiverType)) {
+		return GoValidationError{
+			Err:  BadInputError(errors.New("SmscSearchRequest.Type, Field validation for 'Type' failed on the 'oneof' tag")),
+			From: "query",
+		}
+	}
+	if request.State != "" && !AnyOf(request.State, restapi.ActivatedSmscState, restapi.DeactivatedSmscState) {
+		return GoValidationError{
+			Err:  BadInputError(errors.New("SmscSearchRequest.State, Field validation for 'State' failed on the 'oneof' tag")),
+			From: "query",
+		}
+	}
+	if request.Sort != "" && !AnyOf(request.Sort, restapi.GetSmscSearchRequestSortOpts()...) {
+		return GoValidationError{
+			Err:  BadInputError(errors.New("SmscSearchRequest.Sort, Field validation for 'Sort' failed on the 'oneof' tag")),
+			From: "query",
+		}
 	}
 	page, err := instance.service.FindAll(*request)
 	if err != nil {

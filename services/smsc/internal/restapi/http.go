@@ -69,9 +69,9 @@ func doBind[T any](operationId string, c *gin.Context, b binding.Binding, reques
 			if name == binding.JSON.Name() {
 				name = "body"
 			}
-			return RequestValidationError{
-				error: err,
-				From:  name,
+			return GoValidationError{
+				Err:  err,
+				From: name,
 			}
 		default:
 			return err
@@ -134,7 +134,7 @@ func getErrorHandler(err error) func(c *gin.Context, operationId string, causedB
 		return handleTransactionProblem
 	case validator.ValidationErrors, *validator.InvalidValidationError:
 		return handleValidationErrors
-	case RequestValidationError:
+	case GoValidationError:
 		return handleRequestValidationError
 	case *sdk.EntityNotFoundError:
 		return sendPageNotFound
@@ -166,17 +166,18 @@ func handleValidationErrors(c *gin.Context, operationId string, causedBy error) 
 }
 
 func handleRequestValidationError(c *gin.Context, operationId string, causedBy error) {
-	t := causedBy.(RequestValidationError)
+	t := causedBy.(GoValidationError)
 	statusCode := http.StatusBadRequest
 	detail := fmt.Sprintf(httpValidationDetailWithLocationF, t.From, operationId)
-
-	switch t.error.(type) {
-	case validator.ValidationErrors:
+	switch t.Err.(type) {
+	case validator.ValidationErrors, BadInputError:
 		statusCode = http.StatusUnprocessableEntity
 		break
 	}
 	sendRequestValidationResponse(c, statusCode, operationId, detail)
 }
+
+type BadInputError error
 
 func sendErrorResponse(c *gin.Context, operationId, title, detail, errorType string, statusCode int) {
 	determinedType := fmt.Sprintf(somethingWentWrongF, operationId)
@@ -192,11 +193,11 @@ func sendErrorResponse(c *gin.Context, operationId, title, detail, errorType str
 	).WriteTo(c.Writer)
 }
 
-type RequestValidationError struct {
-	error error
-	From  string
+type GoValidationError struct {
+	Err  error
+	From string
 }
 
-func (e RequestValidationError) Error() string {
-	return e.error.Error()
+func (e GoValidationError) Error() string {
+	return e.Err.Error()
 }

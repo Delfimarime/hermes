@@ -305,6 +305,10 @@ func assertUpdateSmscResponseWhenNoContent(t *testing.T, w *httptest.ResponseRec
 }
 
 func createAssertResponseWhenBadInput[T any](operationId string) func(t *testing.T, w *httptest.ResponseRecorder, _ string, _ T) error {
+	return createAssertResponseBindingWhenBadInput[T](operationId, "body")
+}
+
+func createAssertResponseBindingWhenBadInput[T any](operationId string, binding string) func(t *testing.T, w *httptest.ResponseRecorder, _ string, _ T) error {
 	return func(t *testing.T, w *httptest.ResponseRecorder, _ string, _ T) error {
 		fmt.Println(w.Code, w.Body.String())
 		require.Equal(t, 422, w.Code)
@@ -316,7 +320,7 @@ func createAssertResponseWhenBadInput[T any](operationId string) func(t *testing
 		require.Equal(t, httpValidationTitle, zalandoProblem[zalandoTitlePath])
 		require.Equal(t, operationId, zalandoProblem[zalandoOperationIdPath])
 		require.Equal(t, fmt.Sprintf(constraintViolationF, operationId), zalandoProblem[zalandoTypePath])
-		require.Equal(t, fmt.Sprintf(httpValidationDetailWithLocationF, "body", operationId), zalandoProblem[zalandoDetailPath])
+		require.Equal(t, fmt.Sprintf(httpValidationDetailWithLocationF, binding, operationId), zalandoProblem[zalandoDetailPath])
 		return nil
 	}
 }

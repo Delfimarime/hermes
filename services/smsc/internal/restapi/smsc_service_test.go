@@ -9,6 +9,7 @@ import (
 type TestSmscService struct {
 	err                 error
 	getSmscByIdResponse restapi.GetSmscByIdResponse
+	smscSearchResponse  restapi.Page[restapi.PaginatedSmsc]
 }
 
 func (t *TestSmscService) Add(username string, request restapi.NewSmscRequest) (restapi.NewSmscResponse, error) {
@@ -95,8 +96,8 @@ func (t *TestSmscService) RemoveById(_ string, _ string) error {
 	return t.err
 }
 
-func (t *TestSmscService) FindAll(request restapi.SmscSearchRequest) (restapi.Page[restapi.PaginatedSmsc], error) {
-	panic("implement me")
+func (t *TestSmscService) FindAll(_ restapi.SmscSearchRequest) (restapi.Page[restapi.PaginatedSmsc], error) {
+	return t.smscSearchResponse, t.err
 }
 
 func (t *TestSmscService) FindById(id string) (restapi.GetSmscByIdResponse, error) {

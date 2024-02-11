@@ -20,9 +20,12 @@ const (
 
 const (
 	smscEndpoint             = "/smscs"
-	smscByIdEndpoint         = "/smscs/:id"
-	smscStateByIdEndpoint    = "/smscs/:id/state"
-	smscSettingsByIdEndpoint = "/smscs/:id/settings"
+	smscByIdEndpoint         = smscEndpoint + "/:id"
+	smscStateByIdEndpoint    = smscByIdEndpoint + "/state"
+	smscSettingsByIdEndpoint = smscByIdEndpoint + "settings"
+
+	vaultEndpoint           = "/vaults/"
+	integrationByIdEndpoint = vaultEndpoint + "/:id"
 )
 
 func getGinEngine(authenticator security.Authenticator, smscApi *SmscApi) *gin.Engine {
@@ -31,7 +34,7 @@ func getGinEngine(authenticator security.Authenticator, smscApi *SmscApi) *gin.E
 	r.Use(gin.Recovery())
 	r.Use(ginzap.RecoveryWithZap(zap.L(), true))
 	r.Use(ginzap.Ginzap(zap.L(), time.RFC3339, true))
-	// SMSC
+	// SMSC Endpoint(s)
 	r.GET(smscByIdEndpoint, withCatchError(GetSmscOperationId, smscApi.FindById))
 	r.POST(smscEndpoint, withUser(AddSmscOperationId, authenticator, smscApi.New))
 	r.GET(smscEndpoint, withCatchOperationError(GetSmscPageOperationId, smscApi.FindAll))
@@ -39,6 +42,7 @@ func getGinEngine(authenticator security.Authenticator, smscApi *SmscApi) *gin.E
 	r.DELETE(smscByIdEndpoint, withUser(RemoveSmscOperationId, authenticator, smscApi.RemoveById))
 	r.PUT(smscStateByIdEndpoint, withUser(EditSmscStateOperationId, authenticator, smscApi.EditStateById))
 	r.PUT(smscSettingsByIdEndpoint, withUser(EditSmscSettingsId, authenticator, smscApi.EditSettingsById))
+	// Vault Endpoint(s)
 	return r
 }
 
